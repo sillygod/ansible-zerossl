@@ -1,0 +1,288 @@
+openapi: 3.0.3
+info:
+  title: ZeroSSL API for Ansible Plugin
+  description: API contract for ZeroSSL certificate management operations
+  version: 1.0.0
+  contact:
+    name: ZeroSSL API Documentation
+    url: https://zerossl.com/documentation/api/
+
+servers:
+  - url: https://api.zerossl.com
+    description: ZeroSSL Production API
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /certificates:
+    post:
+      summary: Create a new certificate
+      operationId: createCertificate
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - certificate_domains
+                - certificate_csr
+              properties:
+                certificate_domains:
+                  type: string
+                  description: Comma-separated list of domains
+                  example: "example.com,www.example.com"
+                certificate_csr:
+                  type: string
+                  description: Certificate Signing Request in PEM format
+                certificate_validity_days:
+                  type: integer
+                  default: 90
+                  minimum: 1
+                  maximum: 365
+                  description: Certificate validity period
+      responses:
+        '200':
+          description: Certificate created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateResponse'
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: List certificates
+      operationId: listCertificates
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending_validation, issued, expired, canceled]
+          description: Filter by certificate status
+      responses:
+        '200':
+          description: List of certificates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                  result_count:
+                    type: integer
+                  page:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Certificate'
+
+  /certificates/{certificate_id}:
+    get:
+      summary: Get certificate details
+      operationId: getCertificate
+      parameters:
+        - name: certificate_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Certificate ID
+      responses:
+        '200':
+          description: Certificate details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+        '404':
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /certificates/{certificate_id}/challenges:
+    post:
+      summary: Start domain validation
+      operationId: validateCertificate
+      parameters:
+        - name: certificate_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - validation_method
+              properties:
+                validation_method:
+                  type: string
+                  enum: [HTTP_CSR_HASH, DNS_CSR_HASH]
+                  description: Domain validation method
+      responses:
+        '200':
+          description: Validation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+
+  /certificates/{certificate_id}/download:
+    get:
+      summary: Download certificate
+      operationId: downloadCertificate
+      parameters:
+        - name: certificate_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate bundle ZIP file
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Certificate not ready for download
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /certificates/{certificate_id}/cancel:
+    post:
+      summary: Cancel certificate
+      operationId: cancelCertificate
+      parameters:
+        - name: certificate_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate canceled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: query
+      name: access_key
+
+  schemas:
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Certificate ID
+        common_name:
+          type: string
+          description: Primary domain name
+        additional_domains:
+          type: string
+          description: Comma-separated additional domains
+        status:
+          type: string
+          enum: [draft, pending_validation, issued, expired, canceled]
+        created:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        expires:
+          type: string
+          format: date-time
+          description: Expiration timestamp
+        validation:
+          type: object
+          properties:
+            email_validation:
+              type: object
+            other_methods:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/DomainValidation'
+
+    DomainValidation:
+      type: object
+      properties:
+        file_validation_url_http:
+          type: string
+          description: HTTP validation file URL
+        file_validation_content:
+          type: string
+          description: Content to place in validation file
+        dns_txt_name:
+          type: string
+          description: DNS TXT record name
+        dns_txt_value:
+          type: string
+          description: DNS TXT record value
+
+    CertificateResponse:
+      allOf:
+        - $ref: '#/components/schemas/Certificate'
+        - type: object
+          properties:
+            success:
+              type: boolean
+
+    ValidationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        validation_completed:
+          type: boolean
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: integer
+              description: Error code
+            type:
+              type: string
+              description: Error type
+            info:
+              type: string
+              description: Error description

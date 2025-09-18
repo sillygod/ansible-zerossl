@@ -1,0 +1,40 @@
+namespace: sillygod
+name: zerossl
+version: "1.0.0"
+readme: README.md
+authors:
+  - "jing"
+description: Ansible collection for ZeroSSL certificate management with automated validation
+license:
+  - MIT
+tags:
+  - ssl
+  - certificates
+  - zerossl
+  - automation
+  - security
+  - tls
+  - https
+dependencies: {}
+repository: https://github.com/sillygod/ansible-zerossl
+homepage: https://zerossl.com/
+issues: https://github.com/sillygod/ansible-zerossl/issues
+build_ignore:
+  - .git*
+  - .pytest_cache
+  - __pycache__
+  - "*.pyc"
+  - tests/
+  - specs/
+  - .claude/
+  - .qodo/
+  - .specify/
+  - venv/
+  - "*.egg-info"
+  - .gitignore
+  - dev-setup.sh
+  - setup.py
+  - pyproject.toml
+  - Makefile
+manifest:
+  omit_default_directives: false

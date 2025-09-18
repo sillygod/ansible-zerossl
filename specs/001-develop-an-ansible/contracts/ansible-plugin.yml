@@ -1,0 +1,196 @@
+openapi: 3.0.3
+info:
+  title: Ansible ZeroSSL Plugin Interface
+  description: Internal contract for Ansible ZeroSSL plugin operations
+  version: 1.0.0
+
+paths:
+  # This represents the plugin's main entry point
+  /zerossl_certificate:
+    post:
+      summary: Execute ZeroSSL certificate operation
+      operationId: executeZeroSSLOperation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PluginInput'
+      responses:
+        '200':
+          description: Operation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginOutput'
+        '400':
+          description: Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginError'
+
+components:
+  schemas:
+    PluginInput:
+      type: object
+      required:
+        - api_key
+        - domains
+      properties:
+        api_key:
+          type: string
+          description: ZeroSSL API key
+          minLength: 10
+        domains:
+          type: array
+          items:
+            type: string
+            format: hostname
+          description: List of domains for certificate
+          minItems: 1
+          maxItems: 100
+        csr_path:
+          type: string
+          description: Path to Certificate Signing Request file
+        certificate_id:
+          type: string
+          description: Existing certificate ID (for validate/download operations)
+        certificate_path:
+          type: string
+          description: Path where certificate should be saved
+        validation_method:
+          type: string
+          enum: [HTTP_CSR_HASH, DNS_CSR_HASH]
+          default: HTTP_CSR_HASH
+          description: Domain validation method
+        state:
+          type: string
+          enum: [present, request, validate, download, absent, check_renew_or_create]
+          default: present
+          description: Desired certificate state
+        renew_threshold_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+          description: Days before expiration to trigger renewal
+
+    PluginOutput:
+      type: object
+      required:
+        - changed
+      properties:
+        changed:
+          type: boolean
+          description: Whether the operation modified system state
+        certificate_id:
+          type: string
+          description: ZeroSSL certificate ID
+        validation_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationFile'
+          description: Files needed for domain validation
+        validation_result:
+          type: object
+          description: Result of validation operation
+        needs_renewal:
+          type: boolean
+          description: Whether certificate needs renewal
+        expires_at:
+          type: string
+          format: date-time
+          description: Certificate expiration timestamp
+        msg:
+          type: string
+          description: Human-readable operation message
+        ansible_facts:
+          type: object
+          description: Facts to be registered in Ansible
+          properties:
+            zerossl_certificates:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/CertificateFact'
+
+    ValidationFile:
+      type: object
+      required:
+        - domain
+        - filename
+        - content
+      properties:
+        domain:
+          type: string
+          format: hostname
+          description: Domain being validated
+        filename:
+          type: string
+          description: Validation file name
+        http_validation_url:
+          type: string
+          format: uri
+          description: Full URL where file should be accessible
+        content:
+          type: string
+          description: Content to place in validation file
+        dns_record:
+          type: object
+          description: DNS record details for DNS validation
+          properties:
+            name:
+              type: string
+              description: DNS record name
+            type:
+              type: string
+              enum: [TXT]
+            value:
+              type: string
+              description: DNS record value
+
+    CertificateFact:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ZeroSSL certificate ID
+        domains:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, pending_validation, issued, expired, canceled]
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        certificate_path:
+          type: string
+          description: Local path where certificate is stored
+
+    PluginError:
+      type: object
+      required:
+        - failed
+        - msg
+      properties:
+        failed:
+          type: boolean
+          example: true
+        msg:
+          type: string
+          description: Error message
+        error_type:
+          type: string
+          enum: [validation, http, file, general]
+          description: Category of error for handling
+        retryable:
+          type: boolean
+          description: Whether the operation can be retried
+        certificate_id:
+          type: string
+          description: Certificate ID if applicable to error context

@@ -1,0 +1,8 @@
+requires_ansible: ">=8.0.0"
+plugin_routing:
+  action:
+    zerossl_certificate:
+      plugin_type: action
+  module_utils:
+    zerossl:
+      plugin_type: module_utils

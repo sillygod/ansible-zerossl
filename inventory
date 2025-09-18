@@ -1,0 +1,18 @@
+# Ansible inventory for ZeroSSL plugin testing
+
+[local]
+localhost ansible_connection=local ansible_python_interpreter="{{ ansible_playbook_python }}"
+
+[test_hosts]
+# Add test hosts here for integration testing
+# test-host-1 ansible_host=192.168.1.10 ansible_user=testuser
+# test-host-2 ansible_host=192.168.1.11 ansible_user=testuser
+
+[test_hosts:vars]
+# Common variables for test hosts
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[all:vars]
+# Global variables
+# zerossl_api_key={{ vault_zerossl_api_key }}
+# certificate_base_path=/etc/ssl/certs
