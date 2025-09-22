@@ -38,7 +38,8 @@ Represents the validation process for proving domain ownership.
 - `method: ValidationMethod` - Validation approach (HTTP-01 or DNS-01)
 - `challenge_token: str` - Validation token provided by ZeroSSL
 - `challenge_url: str` - URL where validation file should be placed (HTTP-01)
-- `dns_record: Optional[str]` - TXT record content for DNS validation (DNS-01)
+- `cname_validation_p1: Optional[str]` - CNAME record name/host for DNS validation (DNS-01)
+- `cname_validation_p2: Optional[str]` - CNAME record value/points-to for DNS validation (DNS-01)
 - `status: ValidationStatus` - Current validation state
 - `validated_at: Optional[datetime]` - Timestamp when validation completed
 

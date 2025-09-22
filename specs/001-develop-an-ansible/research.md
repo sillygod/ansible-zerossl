@@ -84,7 +84,7 @@ def _api_request_with_retry(self, endpoint, method='GET', max_retries=3):
 ### Decision: Multi-Domain and Validation Support
 **Rationale**: Support enterprise use cases:
 - SAN certificates for multiple domains
-- Both HTTP-01 (file-based) and DNS-01 (TXT record) validation
+- Both HTTP-01 (file-based) and DNS-01 (CNAME record) validation
 - Automatic validation file placement for HTTP-01
 - Configurable validation timeouts
 

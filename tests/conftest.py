@@ -195,10 +195,12 @@ def pytest_configure(config):
     """Configure pytest for Ansible testing."""
     # Add custom markers
     config.addinivalue_line("markers", "unit: Unit tests")
-    config.addinivalue_line("markers", "integration: Integration tests")
+    config.addinivalue_line("markers", "component: Component tests with mocked dependencies")
+    config.addinivalue_line("markers", "integration: Real integration tests with external APIs")
     config.addinivalue_line("markers", "contract: Contract tests")
     config.addinivalue_line("markers", "slow: Slow tests")
     config.addinivalue_line("markers", "network: Network tests")
+    config.addinivalue_line("markers", "live: Live tests requiring real API keys")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -207,11 +209,18 @@ def pytest_collection_modifyitems(config, items):
         # Auto-mark tests based on path
         if "unit" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
+        elif "component" in str(item.fspath):
+            item.add_marker(pytest.mark.component)
         elif "integration" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
+            item.add_marker(pytest.mark.live)  # Integration tests are live by default
         elif "contract" in str(item.fspath):
             item.add_marker(pytest.mark.contract)
 
         # Mark network tests
         if "api" in item.name.lower() or "network" in item.name.lower():
             item.add_marker(pytest.mark.network)
+
+        # Mark live tests that require real API
+        if "live" in item.name.lower() or "real" in item.name.lower():
+            item.add_marker(pytest.mark.live)

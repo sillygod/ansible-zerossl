@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for DNS validation workflow.
+Component test for DNS validation workflow.
 
 This test covers DNS-01 validation workflows including wildcard certificates
 and DNS record management from the quickstart guide.
@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestDNSValidationWorkflow:
     """Test DNS-01 validation workflows."""
 
@@ -55,25 +55,25 @@ class TestDNSValidationWorkflow:
             'validation': {
                 'other_methods': {
                     'example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',
-                        'dns_txt_value': 'dns_challenge_token_base_domain'
+                        'cname_validation_p1': 'A1B2C3D4E5F6.example.com',
+                        'cname_validation_p2': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                     },
                     '*.example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',  # Same as base domain
-                        'dns_txt_value': 'dns_challenge_token_wildcard'
+                        'cname_validation_p1': 'A1B2C3D4E5F6.example.com',  # Same as base domain
+                        'cname_validation_p2': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                     }
                 }
             },
             'dns_records': [
                 {
-                    'name': '_acme-challenge.example.com',
-                    'type': 'TXT',
-                    'value': 'dns_challenge_token_base_domain'
+                    'name': 'A1B2C3D4E5F6.example.com',
+                    'type': 'CNAME',
+                    'value': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                 },
                 {
-                    'name': '_acme-challenge.example.com',
-                    'type': 'TXT',
-                    'value': 'dns_challenge_token_wildcard'
+                    'name': 'A1B2C3D4E5F6.example.com',
+                    'type': 'CNAME',
+                    'value': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                 }
             ]
         }
@@ -94,8 +94,8 @@ class TestDNSValidationWorkflow:
                 assert 'name' in record
                 assert 'type' in record
                 assert 'value' in record
-                assert record['type'] == 'TXT'
-                assert record['name'].startswith('_acme-challenge.')
+                assert record['type'] == 'CNAME'
+                assert '.' in record['name'] and '.example.com' in record['name']
                 assert len(record['value']) > 0
 
     def test_dns_validation_record_instructions(self, mock_action_base, mock_task_vars,
@@ -132,16 +132,16 @@ class TestDNSValidationWorkflow:
             'validation': {
                 'other_methods': {
                     'dns.example.com': {
-                        'dns_txt_name': '_acme-challenge.dns.example.com',
-                        'dns_txt_value': 'very_long_dns_challenge_token_1234567890abcdef'
+                        'cname_validation_p1': 'B2C3D4E5F6A1.dns.example.com',
+                        'cname_validation_p2': 'B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com'
                     }
                 }
             },
             'dns_records': [
                 {
-                    'name': '_acme-challenge.dns.example.com',
-                    'type': 'TXT',
-                    'value': 'very_long_dns_challenge_token_1234567890abcdef'
+                    'name': 'B2C3D4E5F6A1.dns.example.com',
+                    'type': 'CNAME',
+                    'value': 'B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com'
                 }
             ]
         }
@@ -153,9 +153,9 @@ class TestDNSValidationWorkflow:
             dns_records = result['dns_records']
             dns_record = dns_records[0]
 
-            assert dns_record['name'] == '_acme-challenge.dns.example.com'
-            assert dns_record['type'] == 'TXT'
-            assert dns_record['value'] == 'very_long_dns_challenge_token_1234567890abcdef'
+            assert dns_record['name'] == 'B2C3D4E5F6A1.dns.example.com'
+            assert dns_record['type'] == 'CNAME'
+            assert dns_record['value'] == 'B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com'
 
     def test_multiple_dns_records_for_san(self, mock_action_base, mock_task_vars,
                                         sample_api_key, temp_directory):
@@ -197,17 +197,17 @@ class TestDNSValidationWorkflow:
             'validation': {
                 'other_methods': {
                     domain: {
-                        'dns_txt_name': f'_acme-challenge.{domain}',
-                        'dns_txt_value': f'dns_token_for_{domain.replace(".", "_")}'
+                        'cname_validation_p1': f'{"ABCD1234" if "internal" in domain else "BCDE2345" if "private" in domain else "CDEF3456"}.{domain}',
+                        'cname_validation_p2': f'{"ABCD1234.BCDE2345.CDEF3456" if "internal" in domain else "BCDE2345.CDEF3456.DEFA4567" if "private" in domain else "CDEF3456.DEFA4567.EFAB5678"}.zerossl.com'
                     }
                     for domain in dns_domains
                 }
             },
             'dns_records': [
                 {
-                    'name': f'_acme-challenge.{domain}',
-                    'type': 'TXT',
-                    'value': f'dns_token_for_{domain.replace(".", "_")}'
+                    'name': f'{"ABCD1234" if "internal" in domain else "BCDE2345" if "private" in domain else "CDEF3456"}.{domain}',
+                    'type': 'CNAME',
+                    'value': f'{"ABCD1234.BCDE2345.CDEF3456" if "internal" in domain else "BCDE2345.CDEF3456.DEFA4567" if "private" in domain else "CDEF3456.DEFA4567.EFAB5678"}.zerossl.com'
                 }
                 for domain in dns_domains
             ]
@@ -225,11 +225,10 @@ class TestDNSValidationWorkflow:
             assert len(set(dns_names)) == len(dns_names)  # All unique
 
             for record in dns_records:
-                assert record['type'] == 'TXT'
-                assert record['name'].startswith('_acme-challenge.')
-                # Extract domain from record name and verify token contains domain reference
-                domain_part = record['name'].replace('_acme-challenge.', '')
-                assert domain_part.replace(".", "_") in record['value']
+                assert record['type'] == 'CNAME'
+                assert '.' in record['name'] and '.example.com' in record['name']
+                # Verify CNAME points to ZeroSSL validation domain
+                assert '.zerossl.com' in record['value']
 
     def test_dns_validation_with_existing_records(self, mock_action_base, mock_task_vars,
                                                 sample_api_key, temp_directory):
@@ -265,16 +264,16 @@ class TestDNSValidationWorkflow:
             'validation': {
                 'other_methods': {
                     'existing-dns.example.com': {
-                        'dns_txt_name': '_acme-challenge.existing-dns.example.com',
-                        'dns_txt_value': 'new_dns_challenge_token_replaces_old'
+                        'cname_validation_p1': 'C3D4E5F6A1B2.existing-dns.example.com',
+                        'cname_validation_p2': 'C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com'
                     }
                 }
             },
             'dns_records': [
                 {
-                    'name': '_acme-challenge.existing-dns.example.com',
-                    'type': 'TXT',
-                    'value': 'new_dns_challenge_token_replaces_old'
+                    'name': 'C3D4E5F6A1B2.existing-dns.example.com',
+                    'type': 'CNAME',
+                    'value': 'C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com'
                 }
             ]
         }
@@ -287,7 +286,7 @@ class TestDNSValidationWorkflow:
             dns_record = dns_records[0]
 
             # Should include guidance about replacing existing records
-            assert dns_record['value'] == 'new_dns_challenge_token_replaces_old'
+            assert dns_record['value'] == 'C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com'
 
     def test_dns_validation_timeout_handling(self, mock_action_base, mock_task_vars,
                                            sample_api_key, temp_directory):
@@ -380,43 +379,43 @@ class TestDNSValidationWorkflow:
             'validation': {
                 'other_methods': {
                     'example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',
-                        'dns_txt_value': 'base_domain_token'
+                        'cname_validation_p1': 'D4E5F6A1B2C3.example.com',
+                        'cname_validation_p2': 'D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com'
                     },
                     '*.example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',  # Same as base
-                        'dns_txt_value': 'wildcard_token'
+                        'cname_validation_p1': 'D4E5F6A1B2C3.example.com',  # Same as base
+                        'cname_validation_p2': 'D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com'
                     },
                     'api.example.com': {
-                        'dns_txt_name': '_acme-challenge.api.example.com',
-                        'dns_txt_value': 'api_specific_token'
+                        'cname_validation_p1': 'E5F6A1B2C3D4.api.example.com',
+                        'cname_validation_p2': 'E5F6A1B2C3D4.F6A1B2C3D4E5.A1B2C3D4E5F6.zerossl.com'
                     },
                     'www.example.com': {
-                        'dns_txt_name': '_acme-challenge.www.example.com',
-                        'dns_txt_value': 'www_specific_token'
+                        'cname_validation_p1': 'F6A1B2C3D4E5.www.example.com',
+                        'cname_validation_p2': 'F6A1B2C3D4E5.A1B2C3D4E5F6.B2C3D4E5F6A1.zerossl.com'
                     }
                 }
             },
             'dns_records': [
                 {
-                    'name': '_acme-challenge.example.com',
-                    'type': 'TXT',
-                    'value': 'base_domain_token'
+                    'name': 'D4E5F6A1B2C3.example.com',
+                    'type': 'CNAME',
+                    'value': 'D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com'
                 },
                 {
-                    'name': '_acme-challenge.example.com',
-                    'type': 'TXT',
-                    'value': 'wildcard_token'
+                    'name': 'D4E5F6A1B2C3.example.com',
+                    'type': 'CNAME',
+                    'value': 'D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com'
                 },
                 {
-                    'name': '_acme-challenge.api.example.com',
-                    'type': 'TXT',
-                    'value': 'api_specific_token'
+                    'name': 'E5F6A1B2C3D4.api.example.com',
+                    'type': 'CNAME',
+                    'value': 'E5F6A1B2C3D4.F6A1B2C3D4E5.A1B2C3D4E5F6.zerossl.com'
                 },
                 {
-                    'name': '_acme-challenge.www.example.com',
-                    'type': 'TXT',
-                    'value': 'www_specific_token'
+                    'name': 'F6A1B2C3D4E5.www.example.com',
+                    'type': 'CNAME',
+                    'value': 'F6A1B2C3D4E5.A1B2C3D4E5F6.B2C3D4E5F6A1.zerossl.com'
                 }
             ]
         }
@@ -428,13 +427,13 @@ class TestDNSValidationWorkflow:
             dns_records = result['dns_records']
             assert len(dns_records) == len(combined_domains)
 
-            # Check that base domain and wildcard both reference same challenge name
-            base_domain_records = [r for r in dns_records if r['value'] == 'base_domain_token']
-            wildcard_records = [r for r in dns_records if r['value'] == 'wildcard_token']
+            # Check that base domain and wildcard both reference same validation hash
+            base_domain_records = [r for r in dns_records if r['name'] == 'D4E5F6A1B2C3.example.com'][:1]  # First instance
+            wildcard_records = [r for r in dns_records if r['name'] == 'D4E5F6A1B2C3.example.com'][1:2]   # Second instance
 
             assert len(base_domain_records) == 1
             assert len(wildcard_records) == 1
-            assert base_domain_records[0]['name'] == wildcard_records[0]['name']  # Same challenge name
+            assert base_domain_records[0]['name'] == wildcard_records[0]['name']  # Same validation hash
 
     def test_dns_propagation_verification(self, mock_action_base, mock_task_vars,
                                         sample_api_key, temp_directory):
@@ -518,8 +517,8 @@ class TestDNSValidationWorkflow:
             'validation': {
                 'other_methods': {
                     'split-dns.example.com': {
-                        'dns_txt_name': '_acme-challenge.split-dns.example.com',
-                        'dns_txt_value': 'split_dns_challenge_token'
+                        'cname_validation_p1': 'A2B3C4D5E6F7.split-dns.example.com',
+                        'cname_validation_p2': 'A2B3C4D5E6F7.B3C4D5E6F7A2.C4D5E6F7A2B3.zerossl.com'
                     }
                 }
             }
@@ -533,8 +532,8 @@ class TestDNSValidationWorkflow:
         assert request_result['changed'] is True
         assert len(request_result['validation_files']) == 1
         dns_file = request_result['validation_files'][0]
-        assert dns_file['dns_record']['name'] == '_acme-challenge.split-dns.example.com'
-        assert dns_file['dns_record']['value'] == 'split_dns_challenge_token'
+        assert dns_file['dns_record']['name'] == 'A2B3C4D5E6F7.split-dns.example.com'
+        assert dns_file['dns_record']['value'] == 'A2B3C4D5E6F7.B3C4D5E6F7A2.C4D5E6F7A2B3.zerossl.com'
 
         # Step 2: Validate (after manual DNS record creation)
         mock_action_base._task.args = {

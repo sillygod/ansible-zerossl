@@ -243,12 +243,12 @@ components:
         file_validation_content:
           type: string
           description: Content to place in validation file
-        dns_txt_name:
+        cname_validation_p1:
           type: string
-          description: DNS TXT record name
-        dns_txt_value:
+          description: DNS CNAME record name
+        cname_validation_p2:
           type: string
-          description: DNS TXT record value
+          description: DNS CNAME record value
 
     CertificateResponse:
       allOf:

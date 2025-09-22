@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for certificate renewal check scenario.
+Component test for certificate renewal check scenario.
 
 This test covers the renewal workflow from the quickstart guide:
 checking if certificates need renewal and handling renewal scenarios.
@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestCertificateRenewalCheck:
     """Test certificate renewal check and renewal workflows."""
 

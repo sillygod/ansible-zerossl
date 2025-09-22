@@ -71,7 +71,7 @@ Manage SSL certificates using the ZeroSSL API.
 - **Choices**: `["HTTP_CSR_HASH", "DNS_CSR_HASH"]`
 - **Description**: Domain validation method
   - `HTTP_CSR_HASH`: HTTP-01 validation using file placement
-  - `DNS_CSR_HASH`: DNS-01 validation using TXT records
+  - `DNS_CSR_HASH`: DNS-01 validation using CNAME records
 - **Notes**: DNS validation required for wildcard certificates
 
 #### certificate_id
@@ -220,14 +220,12 @@ Manage SSL certificates using the ZeroSSL API.
 
 ##### dns_records
 - **Type**: `list` of `dict`
-- **Description**: DNS TXT records for validation
+- **Description**: DNS CNAME records for validation
 - **Structure**:
   ```yaml
   dns_records:
-    - name: "_acme-challenge.example.com"
-      type: "TXT"
-      value: "dns-validation-token"
-      ttl: 300
+    - cname_validation_p1: "A1B2C3D4E5F6.example.com"
+      cname_validation_p2: "A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com"
   ```
 
 #### For state: "download" or "present"
@@ -377,7 +375,7 @@ Manage SSL certificates using the ZeroSSL API.
   register: wildcard_request
 
 - debug:
-    msg: "Add DNS TXT record: {{ item.name }} = {{ item.value }}"
+    msg: "Add DNS CNAME record: {{ item.cname_validation_p1 }} = {{ item.cname_validation_p2 }}"
   loop: "{{ wildcard_request.dns_records }}"
 ```
 
@@ -391,10 +389,8 @@ Manage SSL certificates using the ZeroSSL API.
   "validation_method": "DNS_CSR_HASH",
   "dns_records": [
     {
-      "name": "_acme-challenge.example.com",
-      "type": "TXT",
-      "value": "dns-validation-token-abcdef123456",
-      "ttl": 300
+      "cname_validation_p1": "A1B2C3D4E5F6.example.com",
+      "cname_validation_p2": "A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com"
     }
   ],
   "msg": "Certificate request created successfully"

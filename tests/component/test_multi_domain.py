@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for multi-domain (SAN) certificate scenario.
+Component test for multi-domain (SAN) certificate scenario.
 
 This test covers SAN certificate workflows from the quickstart guide:
 creating certificates that cover multiple domains in a single certificate.
@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestMultiDomainCertificate:
     """Test multi-domain (SAN) certificate workflows."""
 
@@ -199,16 +199,16 @@ class TestMultiDomainCertificate:
             'validation': {
                 'other_methods': {
                     'example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',
-                        'dns_txt_value': 'dns_challenge_for_example_com'
+                        'cname_validation_p1': 'A1B2C3D4E5F6.example.com',
+                        'cname_validation_p2': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                     },
                     '*.example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',  # Same as base domain
-                        'dns_txt_value': 'dns_challenge_for_wildcard'
+                        'cname_validation_p1': 'A1B2C3D4E5F6.example.com',  # Same as base domain
+                        'cname_validation_p2': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                     },
                     'api.example.com': {
-                        'dns_txt_name': '_acme-challenge.api.example.com',
-                        'dns_txt_value': 'dns_challenge_for_api'
+                        'cname_validation_p1': 'B2C3D4E5F6A1.api.example.com',
+                        'cname_validation_p2': 'B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com'
                     }
                 }
             }

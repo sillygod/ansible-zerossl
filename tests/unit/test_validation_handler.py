@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from plugins.module_utils.zerossl.validation_handler import ValidationHandler
-from plugins.module_utils.zerossl.exceptions import ZeroSSLValidationError
+from plugins.module_utils.zerossl.exceptions import ZeroSSLValidationError, ZeroSSLTimeoutError
 
 
 @pytest.mark.unit
@@ -216,12 +216,12 @@ class TestValidationHandler:
 
         validation_data = {
             'example.com': {
-                'dns_txt_name': '_acme-challenge.example.com',
-                'dns_txt_value': 'dns_challenge_token_123'
+                'cname_validation_p1': 'A1B2C3D4E5F6.example.com',
+                'cname_validation_p2': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
             },
             'www.example.com': {
-                'dns_txt_name': '_acme-challenge.www.example.com',
-                'dns_txt_value': 'dns_challenge_token_456'
+                'cname_validation_p1': 'B2C3D4E5F6A1.www.example.com',
+                'cname_validation_p2': 'B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com'
             }
         }
 
@@ -234,8 +234,8 @@ class TestValidationHandler:
             assert 'record_name' in record
             assert 'record_type' in record
             assert 'record_value' in record
-            assert record['record_type'] == 'TXT'
-            assert record['record_name'].startswith('_acme-challenge.')
+            assert record['record_type'] == 'CNAME'
+            assert '.example.com' in record['record_name']
 
     def test_dns_record_name_parsing(self):
         """Test parsing of DNS record names."""
@@ -282,30 +282,36 @@ class TestValidationHandler:
         """Test DNS validation verification - success case."""
         handler = ValidationHandler()
 
-        record_name = '_acme-challenge.example.com'
-        expected_value = 'dns_challenge_token_123'
+        record_name = 'A1B2C3D4E5F6.example.com'
+        expected_value = 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
 
         # Mock DNS resolution
         mock_record = Mock()
-        mock_record.to_text.return_value = f'"{expected_value}"'
+        mock_record.to_text.return_value = f'{expected_value}.'
 
-        with patch('dns.resolver.resolve', return_value=[mock_record]) as mock_resolve:
+        mock_resolver = Mock()
+        mock_resolver.resolve.return_value = [mock_record]
+
+        with patch('dns.resolver.Resolver', return_value=mock_resolver):
             result = handler.verify_dns_validation(record_name, expected_value)
 
             assert result['record_exists'] is True
             assert result['value_match'] is True
-            mock_resolve.assert_called_once_with(record_name, 'TXT')
+            mock_resolver.resolve.assert_called_once_with(record_name, 'CNAME')
 
     def test_verify_dns_validation_failure_scenarios(self):
         """Test DNS validation verification - failure scenarios."""
         handler = ValidationHandler()
 
-        record_name = '_acme-challenge.example.com'
-        expected_value = 'expected_token'
+        record_name = 'B2C3D4E5F6A1.example.com'
+        expected_value = 'B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com'
 
         # Test DNS resolution failure (NXDOMAIN)
         from dns.resolver import NXDOMAIN
-        with patch('dns.resolver.resolve', side_effect=NXDOMAIN()):
+        mock_resolver = Mock()
+        mock_resolver.resolve.side_effect = NXDOMAIN()
+
+        with patch('dns.resolver.Resolver', return_value=mock_resolver):
             result = handler.verify_dns_validation(record_name, expected_value)
 
             assert result['record_exists'] is False
@@ -313,9 +319,12 @@ class TestValidationHandler:
 
         # Test wrong DNS value
         mock_record = Mock()
-        mock_record.to_text.return_value = '"wrong_token"'
+        mock_record.to_text.return_value = 'wrong_token.zerossl.com.'
 
-        with patch('dns.resolver.resolve', return_value=[mock_record]):
+        mock_resolver2 = Mock()
+        mock_resolver2.resolve.return_value = [mock_record]
+
+        with patch('dns.resolver.Resolver', return_value=mock_resolver2):
             result = handler.verify_dns_validation(record_name, expected_value)
 
             assert result['record_exists'] is True
@@ -327,8 +336,8 @@ class TestValidationHandler:
 
         wildcard_validation_data = {
             '*.example.com': {
-                'dns_txt_name': '_acme-challenge.example.com',  # Base domain
-                'dns_txt_value': 'wildcard_challenge_token'
+                'cname_validation_p1': 'C3D4E5F6A1B2.example.com',
+                'cname_validation_p2': 'C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com'  # Base domain
             }
         }
 
@@ -338,8 +347,8 @@ class TestValidationHandler:
         record = dns_records[0]
 
         assert record['domain'] == '*.example.com'
-        assert record['record_name'] == '_acme-challenge.example.com'
-        assert record['record_value'] == 'wildcard_challenge_token'
+        assert record['record_name'] == 'C3D4E5F6A1B2.example.com'
+        assert record['record_value'] == 'C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com'
 
     def test_validation_status_polling(self, sample_api_key):
         """Test validation status polling mechanism."""
@@ -381,7 +390,7 @@ class TestValidationHandler:
             'validation_completed': False
         }
 
-        with pytest.raises(ZeroSSLValidationError, match="timeout"):
+        with pytest.raises(ZeroSSLTimeoutError, match="timeout"):
             handler.poll_validation_status(
                 mock_api_client,
                 certificate_id,

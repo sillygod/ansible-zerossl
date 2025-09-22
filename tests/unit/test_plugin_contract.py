@@ -485,6 +485,7 @@ class TestAnsiblePluginStateContract:
                 mock_action_base._task.args['file_mode'] = '0600'
             if state in ['validate', 'download']:
                 mock_action_base._task.args['certificate_id'] = 'test_cert_123'
+                mock_action_base._task.args['web_root'] = '/tmp/.well-known'
             if state == 'download':
                 mock_action_base._task.args['certificate_path'] = '/tmp/test.crt'
 

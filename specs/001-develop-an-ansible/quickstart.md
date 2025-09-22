@@ -136,11 +136,11 @@ export ANSIBLE_ACTION_PLUGINS=$PWD/action_plugins
 - name: Display required DNS records
   debug:
     msg: |
-      Add TXT record for {{ item.domain }}:
-      Name: {{ item.dns_record.name }}
-      Value: {{ item.dns_record.value }}
-  loop: "{{ dns_cert.validation_files }}"
-  when: dns_cert.validation_files is defined
+      Add CNAME record for {{ item.domain }}:
+      Name: {{ item.cname_validation_p1 }}
+      Points To: {{ item.cname_validation_p2 }}
+  loop: "{{ dns_cert.dns_records }}"
+  when: dns_cert.dns_records is defined
 ```
 
 ## Security Best Practices

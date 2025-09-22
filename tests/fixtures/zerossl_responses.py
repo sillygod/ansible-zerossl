@@ -26,15 +26,15 @@ CERTIFICATE_CREATED_RESPONSE = {
                 "file_validation_url_http": "http://example.com/.well-known/pki-validation/validation-file.txt",
                 "file_validation_url_https": "https://example.com/.well-known/pki-validation/validation-file.txt",
                 "file_validation_content": ["content-hash-123", "domain-validation-content"],
-                "cname_validation_p1": "_validation-hash",
-                "cname_validation_p2": "validation.zerossl.com"
+                "cname_validation_p1": "A1B2C3D4E5F6.example.com",
+                "cname_validation_p2": "A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com"
             },
             "www.example.com": {
                 "file_validation_url_http": "http://www.example.com/.well-known/pki-validation/validation-file2.txt",
                 "file_validation_url_https": "https://www.example.com/.well-known/pki-validation/validation-file2.txt",
                 "file_validation_content": ["content-hash-456", "domain-validation-content-2"],
-                "cname_validation_p1": "_validation-hash-2",
-                "cname_validation_p2": "validation.zerossl.com"
+                "cname_validation_p1": "B2C3D4E5F6A1.www.example.com",
+                "cname_validation_p2": "B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com"
             }
         }
     }
@@ -208,8 +208,8 @@ def create_validation_files_response(domains):
             "file_validation_url_http": f"http://{domain}/.well-known/pki-validation/validation-file{i}.txt",
             "file_validation_url_https": f"https://{domain}/.well-known/pki-validation/validation-file{i}.txt",
             "file_validation_content": [f"content-hash-{i}", f"domain-validation-content-{i}"],
-            "cname_validation_p1": f"_validation-hash-{i}",
-            "cname_validation_p2": "validation.zerossl.com"
+            "cname_validation_p1": f"{'ABCD'*(i)}{domain.replace('.', '')}{'1234'*(i)}.{domain}",
+            "cname_validation_p2": f"{'ABCD'*(i)}{domain.replace('.', '')}{'1234'*(i)}.{'EFGH'*(i)}{'5678'*(i)}.{'IJKL'*(i)}{'9012'*(i)}.zerossl.com"
         }
 
     return validation_data
@@ -219,10 +219,11 @@ def create_dns_records_response(domains):
     dns_records = []
 
     for i, domain in enumerate(domains, 1):
+        hash_prefix = f"{'ABCD'*(i)}{domain.replace('.', '')}{'1234'*(i)}"
         dns_records.append({
-            "name": f"_acme-challenge.{domain}",
-            "type": "TXT",
-            "value": f"validation-token-{i}-{domain.replace('.', '-')}",
+            "name": f"{hash_prefix}.{domain}",
+            "type": "CNAME",
+            "value": f"{hash_prefix}.{'EFGH'*(i)}{'5678'*(i)}.{'IJKL'*(i)}{'9012'*(i)}.zerossl.com",
             "ttl": 300
         })
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for security and permissions.
+Component test for security and permissions.
 
 This test covers security aspects like API key handling, file permissions,
 and sensitive data protection.
@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestSecurityAndPermissions:
     """Test security and permission handling."""
 

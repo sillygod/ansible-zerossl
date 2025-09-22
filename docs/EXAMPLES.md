@@ -96,19 +96,17 @@ Comprehensive collection of real-world examples for using the ZeroSSL Ansible pl
     - name: Display DNS validation requirements
       debug:
         msg: |
-          To validate the wildcard certificate, add these DNS TXT records:
+          To validate the wildcard certificate, add these DNS CNAME records:
           {% for record in wildcard_request.dns_records %}
-          Name: {{ record.name }}
-          Type: {{ record.type }}
-          Value: {{ record.value }}
-          TTL: {{ record.ttl }}
+          Name: {{ record.cname_validation_p1 }}
+          Points To: {{ record.cname_validation_p2 }}
           ---
           {% endfor %}
 
     - name: Pause for manual DNS configuration
       pause:
         prompt: |
-          Please add the DNS TXT records shown above to your DNS provider.
+          Please add the DNS CNAME records shown above to your DNS provider.
           Press ENTER when the records are in place and have propagated.
 
     - name: Validate wildcard certificate

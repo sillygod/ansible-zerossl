@@ -9,7 +9,7 @@ including HTTP-01 and DNS-01 validation methods.
 import pytest
 from unittest.mock import Mock, patch
 from plugins.module_utils.zerossl.validation_handler import ValidationHandler
-from plugins.module_utils.zerossl.exceptions import ZeroSSLValidationError
+from plugins.module_utils.zerossl.exceptions import ZeroSSLValidationError, ZeroSSLTimeoutError
 
 
 @pytest.mark.contract
@@ -138,12 +138,12 @@ class TestDNSValidationContract:
 
         validation_data = {
             "example.com": {
-                "dns_txt_name": "_acme-challenge.example.com",
-                "dns_txt_value": "dns_validation_token_123"
+                "cname_validation_p1": "A1B2C3D4E5F6.example.com",
+                "cname_validation_p2": "A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com"
             },
             "*.example.com": {
-                "dns_txt_name": "_acme-challenge.example.com",
-                "dns_txt_value": "dns_validation_token_wildcard"
+                "cname_validation_p1": "B2C3D4E5F6A1.example.com",
+                "cname_validation_p2": "B2C3D4E5F6A1.C3D4E5F6A1B2.D4E5F6A1B2C3.zerossl.com"
             }
         }
 
@@ -156,41 +156,46 @@ class TestDNSValidationContract:
                 assert field in record, f"Missing field: {field}"
 
             # Validate record format
-            assert record['record_type'] == 'TXT'
-            assert record['record_name'].startswith('_acme-challenge.')
+            assert record['record_type'] == 'CNAME'
+            assert len(record['record_name']) > 0
             assert len(record['record_value']) > 0
+            assert '.zerossl.com' in record['record_value']
 
     def test_dns_record_verification(self):
         """Test DNS record verification functionality."""
         handler = ValidationHandler()
 
-        with patch('dns.resolver.resolve') as mock_resolve:
+        with patch('dns.resolver.Resolver') as mock_resolver_class:
             # Mock successful DNS resolution
+            mock_resolver = Mock()
             mock_record = Mock()
-            mock_record.to_text.return_value = '"expected_dns_value"'
-            mock_resolve.return_value = [mock_record]
+            mock_record.to_text.return_value = 'expected.zerossl.com.'
+            mock_resolver.resolve.return_value = [mock_record]
+            mock_resolver_class.return_value = mock_resolver
 
             result = handler.verify_dns_validation(
-                "_acme-challenge.example.com",
-                "expected_dns_value"
+                "A1B2C3D4E5F6.example.com",
+                "expected.zerossl.com"
             )
 
             assert result['record_exists'] is True
             assert result['value_match'] is True
-            mock_resolve.assert_called_once_with("_acme-challenge.example.com", "TXT")
+            mock_resolver.resolve.assert_called_once_with("A1B2C3D4E5F6.example.com", "CNAME")
 
     def test_dns_validation_failure_scenarios(self):
         """Test DNS validation failure handling."""
         handler = ValidationHandler()
 
-        with patch('dns.resolver.resolve') as mock_resolve:
+        with patch('dns.resolver.Resolver') as mock_resolver_class:
             # Test DNS resolution failure
             from dns.resolver import NXDOMAIN
-            mock_resolve.side_effect = NXDOMAIN()
+            mock_resolver = Mock()
+            mock_resolver.resolve.side_effect = NXDOMAIN()
+            mock_resolver_class.return_value = mock_resolver
 
             result = handler.verify_dns_validation(
-                "_acme-challenge.nonexistent.com",
-                "expected_value"
+                "nonexistent.example.com",
+                "expected.zerossl.com"
             )
 
             assert result['record_exists'] is False
@@ -202,8 +207,8 @@ class TestDNSValidationContract:
 
         wildcard_validation = {
             "*.example.com": {
-                "dns_txt_name": "_acme-challenge.example.com",
-                "dns_txt_value": "wildcard_validation_token"
+                "cname_validation_p1": "C3D4E5F6A1B2.example.com",
+                "cname_validation_p2": "C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com"
             }
         }
 
@@ -214,8 +219,8 @@ class TestDNSValidationContract:
 
         # Wildcard domain should map to base domain for DNS
         assert record['domain'] == '*.example.com'
-        assert record['record_name'] == '_acme-challenge.example.com'
-        assert 'wildcard' in record['record_value']
+        assert record['record_name'] == 'C3D4E5F6A1B2.example.com'
+        assert '.zerossl.com' in record['record_value']
 
 
 @pytest.mark.contract
@@ -234,43 +239,39 @@ class TestValidationStatusContract:
             {"status": "issued", "validation_completed": True}
         ]
 
-        with patch('plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient') as mock_client_class:
-            mock_client = Mock()
-            mock_client.get_certificate.side_effect = status_progression
-            mock_client_class.return_value = mock_client
+        mock_client = Mock()
+        mock_client.get_certificate.side_effect = status_progression
 
-            result = handler.poll_validation_status(
-                sample_api_key,
-                certificate_id,
-                max_attempts=3,
-                poll_interval=0.1  # Fast polling for tests
-            )
+        result = handler.poll_validation_status(
+            mock_client,
+            certificate_id,
+            max_attempts=3,
+            poll_interval=0.1  # Fast polling for tests
+        )
 
-            assert result['final_status'] == 'issued'
-            assert result['validation_completed'] is True
-            assert mock_client.get_certificate.call_count == 3
+        assert result['final_status'] == 'issued'
+        assert result['validation_completed'] is True
+        assert mock_client.get_certificate.call_count == 3
 
     def test_validation_timeout_handling(self, sample_api_key):
         """Test validation timeout scenarios."""
         handler = ValidationHandler()
         certificate_id = "test_cert_123456789"
 
-        with patch('plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient') as mock_client_class:
-            mock_client = Mock()
-            # Always return pending status
-            mock_client.get_certificate.return_value = {
-                "status": "pending_validation",
-                "validation_completed": False
-            }
-            mock_client_class.return_value = mock_client
+        mock_client = Mock()
+        # Always return pending status
+        mock_client.get_certificate.return_value = {
+            "status": "pending_validation",
+            "validation_completed": False
+        }
 
-            with pytest.raises(ZeroSSLValidationError, match="Validation timeout"):
-                handler.poll_validation_status(
-                    sample_api_key,
-                    certificate_id,
-                    max_attempts=2,
-                    poll_interval=0.1
-                )
+        with pytest.raises(ZeroSSLTimeoutError, match="Validation polling timed out"):
+            handler.poll_validation_status(
+                mock_client,
+                certificate_id,
+                max_attempts=2,
+                poll_interval=0.1
+            )
 
     def test_validation_failure_detection(self, sample_api_key):
         """Test detection of validation failures."""
@@ -280,20 +281,18 @@ class TestValidationStatusContract:
         failure_statuses = ["canceled", "expired", "failed"]
 
         for failure_status in failure_statuses:
-            with patch('plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient') as mock_client_class:
-                mock_client = Mock()
-                mock_client.get_certificate.return_value = {
-                    "status": failure_status,
-                    "validation_completed": False
-                }
-                mock_client_class.return_value = mock_client
+            mock_client = Mock()
+            mock_client.get_certificate.return_value = {
+                "status": failure_status,
+                "validation_completed": False
+            }
 
-                with pytest.raises(ZeroSSLValidationError, match=f"Validation failed.*{failure_status}"):
-                    handler.poll_validation_status(
-                        sample_api_key,
-                        certificate_id,
-                        max_attempts=1
-                    )
+            with pytest.raises(ZeroSSLValidationError, match=f"Certificate validation failed.*{failure_status}"):
+                handler.poll_validation_status(
+                    mock_client,
+                    certificate_id,
+                    max_attempts=1
+                )
 
 
 @pytest.mark.contract
@@ -343,8 +342,8 @@ class TestValidationWorkflowContract:
         # Mock DNS validation data
         validation_data = {
             "example.com": {
-                "dns_txt_name": "_acme-challenge.example.com",
-                "dns_txt_value": "dns_validation_token_123"
+                "cname_validation_p1": "D4E5F6A1B2C3.example.com",
+                "cname_validation_p2": "D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com"
             }
         }
 
@@ -358,14 +357,16 @@ class TestValidationWorkflowContract:
         assert len(instructions['records_to_create']) == 1
 
         # Step 3: Verify DNS records (mock)
-        with patch('dns.resolver.resolve') as mock_resolve:
+        with patch('dns.resolver.Resolver') as mock_resolver_class:
+            mock_resolver = Mock()
             mock_record = Mock()
-            mock_record.to_text.return_value = '"dns_validation_token_123"'
-            mock_resolve.return_value = [mock_record]
+            mock_record.to_text.return_value = 'D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com.'
+            mock_resolver.resolve.return_value = [mock_record]
+            mock_resolver_class.return_value = mock_resolver
 
             verify_result = handler.verify_dns_validation(
-                "_acme-challenge.example.com",
-                "dns_validation_token_123"
+                "D4E5F6A1B2C3.example.com",
+                "D4E5F6A1B2C3.E5F6A1B2C3D4.F6A1B2C3D4E5.zerossl.com"
             )
             assert verify_result['record_exists'] is True
             assert verify_result['value_match'] is True

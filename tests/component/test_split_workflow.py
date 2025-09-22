@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for split workflow scenario.
+Component test for split workflow scenario.
 
 This test covers the step-by-step workflow from the quickstart guide:
 requesting, validating, and downloading certificates separately for advanced control.
@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch, MagicMock
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestSplitWorkflow:
     """Test split certificate workflow (request → validate → download)."""
 
@@ -351,8 +351,8 @@ MSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMT
             'validation': {
                 'other_methods': {
                     'example.com': {
-                        'dns_txt_name': '_acme-challenge.example.com',
-                        'dns_txt_value': 'dns_challenge_token_123'
+                        'cname_validation_p1': 'A1B2C3D4E5F6.example.com',
+                        'cname_validation_p2': 'A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com'
                     }
                 }
             }

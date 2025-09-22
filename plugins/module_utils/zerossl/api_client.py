@@ -117,7 +117,8 @@ class ZeroSSLAPIClient:
             ZeroSSLHTTPError: If API request fails
             ZeroSSLRateLimitError: If rate limit exceeded
         """
-        url = self._build_url(endpoint, params) if method == 'GET' else f"{self.base_url}{endpoint}"
+        # Always build URL with auth parameters for all methods
+        url = self._build_url(endpoint, params)
 
         # Prepare request data
         request_kwargs = {
@@ -127,18 +128,12 @@ class ZeroSSLAPIClient:
         if method == 'POST':
             if json:
                 request_kwargs['json'] = json
-                # Add auth to JSON payload for POST
-                if 'access_key' not in request_kwargs['json']:
-                    request_kwargs['json']['access_key'] = self.api_key
             elif data:
-                # Add auth to form data
-                auth_data = data.copy()
-                auth_data['access_key'] = self.api_key
-                request_kwargs['data'] = auth_data
-            else:
-                request_kwargs['data'] = {'access_key': self.api_key}
+                request_kwargs['data'] = data
+            # No need to add auth to request body - it's in the URL
         elif method == 'GET':
-            request_kwargs['url'] = url
+            # URL already contains auth parameters
+            pass
 
         # Retry loop
         last_exception = None
@@ -146,9 +141,9 @@ class ZeroSSLAPIClient:
             try:
                 # Make the request
                 if method == 'GET':
-                    response = self.session.get(**request_kwargs)
+                    response = self.session.get(url, **request_kwargs)
                 elif method == 'POST':
-                    response = self.session.post(f"{self.base_url}{endpoint}", **request_kwargs)
+                    response = self.session.post(url, **request_kwargs)
                 else:
                     raise ZeroSSLHTTPError(f"Unsupported HTTP method: {method}")
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for error handling and retry logic.
+Component test for error handling and retry logic.
 
 This test covers comprehensive error scenarios and recovery mechanisms.
 """
@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestErrorHandlingAndRetry:
     """Test error handling and retry logic."""
 

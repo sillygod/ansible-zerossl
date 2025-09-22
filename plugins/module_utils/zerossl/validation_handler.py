@@ -242,25 +242,25 @@ class ValidationHandler:
         dns_records = []
 
         for domain, domain_data in validation_data.items():
-            if 'dns_txt_name' not in domain_data:
+            if 'cname_validation_p1' not in domain_data:
                 raise ZeroSSLValidationError(
-                    f"Missing DNS TXT record name for domain: {domain}",
+                    f"Missing DNS CNAME record name for domain: {domain}",
                     domain=domain,
                     validation_method="DNS_CSR_HASH"
                 )
 
-            if 'dns_txt_value' not in domain_data:
+            if 'cname_validation_p2' not in domain_data:
                 raise ZeroSSLValidationError(
-                    f"Missing DNS TXT record value for domain: {domain}",
+                    f"Missing DNS CNAME record value for domain: {domain}",
                     domain=domain,
                     validation_method="DNS_CSR_HASH"
                 )
 
             dns_record = {
                 'domain': domain,
-                'record_name': self._parse_dns_record_name(domain_data['dns_txt_name']),
-                'record_type': 'TXT',
-                'record_value': domain_data['dns_txt_value']
+                'record_name': domain_data['cname_validation_p1'],  # Host-part (Name)
+                'record_type': 'CNAME',
+                'record_value': domain_data['cname_validation_p2']  # Point-to (Value)
             }
 
             dns_records.append(dns_record)
@@ -298,8 +298,8 @@ class ValidationHandler:
             instructions.extend([
                 f"{i}. Domain: {record['domain']}",
                 f"   Record Type: {record['record_type']}",
-                f"   Record Name: {record['record_name']}",
-                f"   Record Value: {record['record_value']}",
+                f"   Name (Host): {record['record_name']}",
+                f"   Points To (Value): {record['record_value']}",
                 ""
             ])
 
@@ -307,7 +307,7 @@ class ValidationHandler:
             "Instructions:",
             "1. Log into your DNS provider's control panel",
             "2. Navigate to DNS management for your domain",
-            "3. Create TXT records as specified above",
+            "3. Create CNAME records as specified above",
             "4. Wait for DNS propagation (usually 5-30 minutes)",
             "5. Trigger validation once records are live"
         ])
@@ -320,11 +320,11 @@ class ValidationHandler:
         expected_value: str
     ) -> Dict[str, Any]:
         """
-        Verify DNS validation by checking TXT record.
+        Verify DNS validation by checking CNAME record.
 
         Args:
             record_name: DNS record name to check
-            expected_value: Expected TXT record value
+            expected_value: Expected CNAME record value
 
         Returns:
             Verification result
@@ -341,21 +341,21 @@ class ValidationHandler:
             resolver.timeout = self.dns_timeout
             resolver.lifetime = self.dns_timeout
 
-            answers = resolver.resolve(record_name, 'TXT')
+            answers = resolver.resolve(record_name, 'CNAME')
             result['record_exists'] = True
 
-            # Extract TXT record values
+            # Extract CNAME record values
             for rdata in answers:
-                txt_value = rdata.to_text().strip('"')
-                result['actual_values'].append(txt_value)
+                cname_value = rdata.to_text().rstrip('.')
+                result['actual_values'].append(cname_value)
 
-                if txt_value == expected_value:
+                if cname_value == expected_value:
                     result['value_match'] = True
 
         except NXDOMAIN:
             result['error'] = f"DNS record not found: {record_name}"
         except NoAnswer:
-            result['error'] = f"No TXT record found for: {record_name}"
+            result['error'] = f"No CNAME record found for: {record_name}"
         except Exception as e:
             result['error'] = f"DNS resolution failed: {e}"
 

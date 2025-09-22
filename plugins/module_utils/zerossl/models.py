@@ -163,7 +163,7 @@ class DomainValidation:
         method: Validation approach (HTTP-01 or DNS-01)
         challenge_token: Validation token provided by ZeroSSL
         challenge_url: URL where validation file should be placed (HTTP-01)
-        dns_record: TXT record content for DNS validation (DNS-01)
+        dns_record: CNAME record content for DNS validation (DNS-01)
         status: Current validation state
         validated_at: Timestamp when validation completed
     """

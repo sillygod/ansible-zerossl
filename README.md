@@ -205,7 +205,7 @@ vault_zerossl_api_key: your_actual_api_key_here
 
 - name: Display DNS records for validation
   debug:
-    msg: "Add DNS TXT record: {{ item.name }} = {{ item.value }}"
+    msg: "Add DNS CNAME record: {{ item.cname_validation_p1 }} = {{ item.cname_validation_p2 }}"
   loop: "{{ cert_result.dns_records }}"
   when: cert_result.dns_records is defined
 ```
@@ -321,10 +321,8 @@ The plugin returns comprehensive information about the certificate operation:
   ],
   "dns_records": [
     {
-      "name": "_acme-challenge.example.com",
-      "type": "TXT",
-      "value": "dns-validation-token",
-      "ttl": 300
+      "cname_validation_p1": "A1B2C3D4E5F6.example.com",
+      "cname_validation_p2": "A1B2C3D4E5F6.B2C3D4E5F6A1.C3D4E5F6A1B2.zerossl.com"
     }
   ],
   "msg": "Certificate created successfully"
@@ -426,7 +424,7 @@ The plugin provides detailed error information for troubleshooting:
    - Verify web server configuration
 
 2. **DNS validation issues**:
-   - Verify DNS TXT records are properly set
+   - Verify DNS CNAME records are properly set with correct format (cname_validation_p1 → cname_validation_p2)
    - Allow time for DNS propagation
    - Check TTL values
 
@@ -456,10 +454,10 @@ Test validation file accessibility:
 curl -I http://example.com/.well-known/pki-validation/validation-file.txt
 ```
 
-Check DNS TXT records:
+Check DNS CNAME records:
 
 ```bash
-dig TXT _acme-challenge.example.com
+dig CNAME A1B2C3D4E5F6.example.com
 ```
 
 ## Collection Information
@@ -484,13 +482,56 @@ dig TXT _acme-challenge.example.com
 
 For detailed API documentation, see the [ZeroSSL API Documentation](https://zerossl.com/documentation/api/).
 
+## Testing Strategy
+
+This project implements a comprehensive three-tier testing approach:
+
+### Test Structure
+
+```
+tests/
+├── unit/           # Unit tests - fast, isolated, mocked dependencies
+├── component/      # Component tests - workflow testing with mocked APIs
+├── integration/    # Integration tests - real ZeroSSL API calls ⚠️
+├── fixtures/       # Test data and helpers
+├── security/       # Security-focused tests
+├── performance/    # Performance and load tests
+└── compatibility/ # Ansible version compatibility tests
+```
+
+### Test Categories
+
+| Type | Speed | API Calls | When to Run | Purpose |
+|------|-------|-----------|-------------|---------|
+| **Unit** | Very Fast (<1s) | None (mocked) | Always | Test individual components |
+| **Component** | Fast (1-5s) | None (mocked) | Pre-commit, CI | Test workflow integration |
+| **Integration** | Slow (30s+) | Real API calls | Manual, releases | Test real API integration |
+
+### Running Different Test Types
+
+```bash
+# Development workflow (fast feedback)
+pytest tests/unit/ -x
+
+# Pre-commit checks (comprehensive but fast)
+pytest tests/unit/ tests/component/ --cov=plugins/
+
+# Pre-release validation (manual, uses API quota)
+pytest tests/integration/ -v -s
+
+# Full test suite (development only)
+pytest --cov=plugins/ --cov-report=html
+```
+
+For detailed testing documentation, see [tests/README.md](tests/README.md).
+
 ## Contributing
 
 1. Fork the repository at [sillygod/ansible-zerossl](https://github.com/sillygod/ansible-zerossl)
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
+4. Add tests for new functionality (unit and component tests required)
+5. Ensure fast tests pass: `pytest tests/unit/ tests/component/`
 6. Submit a pull request
 
 ### Development Setup
@@ -503,22 +544,46 @@ cd ansible-zerossl
 
 ### Running Tests
 
+The project uses a three-tier testing strategy:
+
 ```bash
 # Install development dependencies
 pip install -r requirements.txt
 
-# Run all tests
-pytest
+# Fast tests (CI-safe) - Unit and component tests with mocks
+pytest tests/unit/ tests/component/ -v
+
+# Run all tests except integration (recommended for development)
+pytest -m "not integration" -v
 
 # Run specific test categories
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/performance/
-pytest tests/security/
+pytest tests/unit/ -v          # Unit tests - isolated components
+pytest tests/component/ -v     # Component tests - workflow with mocks
+pytest tests/integration/ -v   # Integration tests - real ZeroSSL API ⚠️
+pytest tests/performance/ -v   # Performance and load tests
+pytest tests/security/ -v      # Security-focused tests
 
-# Run with coverage
-pytest --cov=plugins/module_utils/zerossl/ --cov-report=html
+# Run with coverage (fast tests only)
+pytest tests/unit/ tests/component/ --cov=plugins/ --cov-report=html
 ```
+
+#### Integration Tests (Real API Testing)
+
+Integration tests make real API calls to ZeroSSL and require environment setup:
+
+```bash
+# Set up environment for integration tests
+export ZEROSSL_API_KEY="your_actual_api_key"
+export ZEROSSL_TEST_DOMAINS="test.yourdomain.com,api.yourdomain.com"
+
+# Run integration tests (uses real API quota)
+pytest tests/integration/ -v -s
+
+# Skip integration tests (default behavior)
+pytest -m "not integration" -v
+```
+
+**⚠️ Warning**: Integration tests use real ZeroSSL API quota and require domains you control for validation. Use sparingly.
 
 ### Building the Collection
 

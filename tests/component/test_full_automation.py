@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Integration test for full certificate automation scenario.
+Component test for full certificate automation scenario.
 
-This test covers the complete end-to-end workflow from the quickstart guide:
-obtaining an SSL certificate with full automation (present state).
+This test covers the complete workflow orchestration using mocked external dependencies.
+Tests how ActionModule components work together without real ZeroSSL API calls.
 """
 
 import pytest
@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch, MagicMock
 from plugins.action.zerossl_certificate import ActionModule
 
 
-@pytest.mark.integration
+@pytest.mark.component
 class TestFullCertificateAutomation:
     """Test complete certificate automation workflow."""
 

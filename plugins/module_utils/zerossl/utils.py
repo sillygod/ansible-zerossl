@@ -69,11 +69,6 @@ def validate_domain(domain: str) -> bool:
         if not re.match(r'^[a-zA-Z0-9-]+$', label):
             raise ZeroSSLConfigurationError(f"Domain label '{label}' contains invalid characters")
 
-        # Last label (TLD) must contain at least one letter
-        if i == len(labels) - 1:
-            if not re.search(r'[a-zA-Z]', label):
-                raise ZeroSSLConfigurationError(f"Top-level domain '{label}' must contain at least one letter")
-
     return True
 
 

@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Core Functionality
 - **Certificate States**: `present`, `request`, `validate`, `download`, `absent`, `check_renew_or_create`
-- **Validation Methods**: HTTP-01 file validation and DNS-01 TXT record validation
+- **Validation Methods**: HTTP-01 file validation and DNS-01 CNAME record validation
 - **Certificate Types**: Single domain, multi-domain (SAN), and wildcard certificates
 - **File Management**: Automatic file creation with secure permissions (0600 for private keys, 0644 for certificates)
 - **CSR Support**: Auto-generation or custom CSR input
@@ -98,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### State-Specific
 - `validation_files` (list): HTTP validation files for placement
-- `dns_records` (list): DNS TXT records for validation
+- `dns_records` (list): DNS CNAME records for validation
 - `files_created` (list): List of files created or updated
 - `needs_renewal` (bool): Whether certificate needs renewal
 - `days_until_expiry` (int): Days until certificate expires
