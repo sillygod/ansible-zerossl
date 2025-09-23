@@ -102,13 +102,13 @@ class TestValidationHandler:
             {
                 'domain': 'example.com',
                 'filename': 'test123.txt',
-                'content': 'validation_content_123',
+                'content': ['2B449B722B449B729394793947', 'comodoca.com', '4bad7360c7076ba'],
                 'url_path': '/.well-known/pki-validation/test123.txt'
             },
             {
                 'domain': 'www.example.com',
                 'filename': 'test456.txt',
-                'content': 'validation_content_456',
+                'content': ['3C559C833C559C839495893958', 'sectigo.com', '5cde8471d8187cb'],
                 'url_path': '/.well-known/pki-validation/test456.txt'
             }
         ]
@@ -125,8 +125,9 @@ class TestValidationHandler:
 
             # Verify content
             content = file_path.read_text()
-            expected_content = next(vf['content'] for vf in validation_files
-                                  if vf['filename'] == file_path.name)
+            expected_content_list = next(vf['content'] for vf in validation_files
+                                       if vf['filename'] == file_path.name)
+            expected_content = '\n'.join(expected_content_list)
             assert content == expected_content
 
     def test_place_validation_files_permission_error(self, temp_directory):
@@ -350,75 +351,6 @@ class TestValidationHandler:
         assert record['record_name'] == 'C3D4E5F6A1B2.example.com'
         assert record['record_value'] == 'C3D4E5F6A1B2.D4E5F6A1B2C3.E5F6A1B2C3D4.zerossl.com'
 
-    def test_validation_status_polling(self, sample_api_key):
-        """Test validation status polling mechanism."""
-        handler = ValidationHandler()
-        certificate_id = 'polling_test_cert'
-
-        # Mock API client
-        mock_api_client = Mock()
-
-        # Simulate validation progression: pending → pending → issued
-        status_progression = [
-            {'status': 'pending_validation', 'validation_completed': False},
-            {'status': 'pending_validation', 'validation_completed': False},
-            {'status': 'issued', 'validation_completed': True}
-        ]
-
-        mock_api_client.get_certificate.side_effect = status_progression
-
-        result = handler.poll_validation_status(
-            mock_api_client,
-            certificate_id,
-            max_attempts=3,
-            poll_interval=0.1  # Fast polling for tests
-        )
-
-        assert result['final_status'] == 'issued'
-        assert result['validation_completed'] is True
-        assert result['attempts'] == 3
-
-    def test_validation_polling_timeout(self, sample_api_key):
-        """Test validation polling timeout handling."""
-        handler = ValidationHandler()
-        certificate_id = 'timeout_test_cert'
-
-        mock_api_client = Mock()
-        # Always return pending status
-        mock_api_client.get_certificate.return_value = {
-            'status': 'pending_validation',
-            'validation_completed': False
-        }
-
-        with pytest.raises(ZeroSSLTimeoutError, match="timeout"):
-            handler.poll_validation_status(
-                mock_api_client,
-                certificate_id,
-                max_attempts=2,
-                poll_interval=0.1
-            )
-
-    def test_validation_failure_detection(self, sample_api_key):
-        """Test detection of validation failures."""
-        handler = ValidationHandler()
-        certificate_id = 'failure_test_cert'
-
-        mock_api_client = Mock()
-
-        failure_statuses = ['canceled', 'expired', 'failed']
-
-        for failure_status in failure_statuses:
-            mock_api_client.get_certificate.return_value = {
-                'status': failure_status,
-                'validation_completed': False
-            }
-
-            with pytest.raises(ZeroSSLValidationError, match=failure_status):
-                handler.poll_validation_status(
-                    mock_api_client,
-                    certificate_id,
-                    max_attempts=1
-                )
 
     def test_validation_method_selection(self):
         """Test automatic validation method selection."""

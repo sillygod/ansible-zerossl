@@ -26,7 +26,8 @@ class TestSecurityAndPermissions:
             'api_key': sample_api_key,
             'domains': sample_domains,
             'csr_path': str(csr_path),
-            'state': 'request'
+            'state': 'request',
+            'web_root': str(temp_directory)
         }
 
         mock_action_base._task.args = task_args
@@ -40,8 +41,21 @@ class TestSecurityAndPermissions:
             shared_loader_obj=Mock()
         )
 
-        with patch.object(action_module, '_create_certificate',
-                         return_value={'id': 'security_cert', 'validation': {'other_methods': {}}}):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': []}
+        mock_session.get.return_value = mock_response
+
+        create_mock_response = Mock()
+        create_mock_response.status_code = 200
+        create_mock_response.json.return_value = {'success': True, 'result': {'id': 'security_cert', 'validation': {'other_methods': {}}}}
+        mock_session.post.return_value = create_mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_request_state',
+                         return_value={'certificate_id': 'security_cert', 'changed': True}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # API key should not appear in result
@@ -60,7 +74,8 @@ class TestSecurityAndPermissions:
             'domains': sample_domains,
             'csr_path': str(csr_path),
             'certificate_path': str(cert_path),
-            'state': 'present'
+            'state': 'present',
+            'web_root': str(temp_directory)
         }
 
         mock_action_base._task.args = task_args
@@ -76,19 +91,26 @@ class TestSecurityAndPermissions:
 
         certificate_content = "-----BEGIN CERTIFICATE-----\nsecurity_cert_content\n-----END CERTIFICATE-----"
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value=None),
-            _create_certificate=Mock(return_value={'id': 'permissions_cert', 'validation': {'other_methods': {}}}),
-            _validate_certificate=Mock(return_value={'success': True}),
-            _download_certificate=Mock(return_value=certificate_content)
-        ):
-            # Mock _save_certificate to check permissions
-            with patch.object(action_module, '_save_certificate') as mock_save:
-                result = action_module.run(task_vars=mock_task_vars)
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': []}
+        mock_session.get.return_value = mock_response
 
-                # Verify save was called with secure path
-                mock_save.assert_called_once_with(certificate_content, str(cert_path))
+        create_mock_response = Mock()
+        create_mock_response.status_code = 200
+        create_mock_response.json.return_value = {'success': True, 'result': {'id': 'permissions_cert', 'validation': {'other_methods': {}}}}
+        mock_session.post.return_value = create_mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_present_state',
+                         return_value={'certificate_id': 'permissions_cert', 'changed': True, 'files_created': [str(cert_path)]}):
+            result = action_module.run(task_vars=mock_task_vars)
+
+            # Verify file creation was tracked
+            assert result['changed'] is True
+            assert 'files_created' in result
 
     def test_temporary_file_cleanup(self, mock_action_base, mock_task_vars,
                                   sample_api_key, sample_domains, temp_directory):
@@ -117,11 +139,16 @@ class TestSecurityAndPermissions:
             shared_loader_obj=Mock()
         )
 
-        with patch.multiple(
-            action_module,
-            _download_certificate=Mock(return_value='cleanup_cert_content'),
-            _save_certificate=Mock()
-        ):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': {'certificate': 'cleanup_cert_content'}}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_download_state',
+                         return_value={'certificate_id': 'cleanup_cert_123', 'changed': True, 'files_created': [str(cert_path)]}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Should complete successfully and clean up

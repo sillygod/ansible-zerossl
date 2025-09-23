@@ -55,96 +55,112 @@ class TestLiveCertificateLifecycle:
         # Generate a real CSR for testing
         self._generate_test_csr(csr_path, key_path, test_domains[0])
 
-        # Configure task arguments for live certificate creation
-        task_args = {
-            'api_key': zerossl_api_key,
-            'domains': test_domains[:1],  # Use only first domain for simplicity
-            'csr_path': str(csr_path),
-            'certificate_path': str(cert_path),
-            'state': 'present',
-            'validation_method': 'HTTP_CSR_HASH',
-            'timeout': integration_test_config['timeout']
-        }
-
-        live_action_base._task.args = task_args
-
-        # Create action module (no mocks - this is live!)
-        action_module = ActionModule(
-            task=live_action_base._task,
-            connection=Mock(),
-            play_context=Mock(),
-            loader=Mock(),
-            templar=Mock(),
-            shared_loader_obj=Mock()
-        )
-
         try:
-            # Step 1: Create certificate
-            print(f"\n=== Creating certificate for domain: {test_domains[0]} ===")
+            # Step 1: Request certificate (state='request')
+            print(f"\n=== Step 1: Requesting certificate for domain: {test_domains[0]} ===")
+
+            # Configure task arguments for certificate request
+            request_task_args = {
+                'api_key': zerossl_api_key,
+                'domains': test_domains[:1],  # Use only first domain for simplicity
+                'csr_path': str(csr_path),
+                'state': 'request',
+                'validation_method': 'HTTP_CSR_HASH',
+                'file_mode': '0644',
+                'timeout': integration_test_config['timeout']
+            }
+
+            live_action_base._task.args = request_task_args
+
+            # Create action module (no mocks - this is live!)
+            action_module = ActionModule(
+                task=live_action_base._task,
+                connection=Mock(),
+                play_context=Mock(),
+                loader=Mock(),
+                templar=Mock(),
+                shared_loader_obj=Mock()
+            )
+
+            # Request certificate
             result = action_module.run(task_vars=live_task_vars)
 
-            # Should create a certificate in 'draft' status
+            # Should create a certificate in 'draft' status with validation info
             assert 'certificate_id' in result
+            assert result['changed'] is True
             certificate_id = result['certificate_id']
             cleanup_certificates.append(certificate_id)
 
-            print(f"Created certificate with ID: {certificate_id}")
+            print(f"Created certificate request with ID: {certificate_id}")
+            print(f"Certificate status: {result.get('status', 'unknown')}")
 
-            # Step 2: Get validation information
-            cert_info = action_module._get_certificate_info(certificate_id)
-            assert cert_info['status'] == 'draft'
-            assert 'validation' in cert_info
+            # Should have validation files for HTTP validation
+            assert 'validation_files' in result
+            assert len(result['validation_files']) > 0
 
-            validation_data = cert_info['validation']['other_methods']
-            domain = test_domains[0]
-            assert domain in validation_data
-
-            validation_info = validation_data[domain]
-            validation_url = validation_info['file_validation_url_http']
-            validation_content = validation_info['file_validation_content']
-
-            print(f"\n=== Manual Validation Required ===")
-            print(f"Domain: {domain}")
-            print(f"Validation URL: {validation_url}")
-            print(f"Validation Content: {validation_content}")
-            print(f"\nPlease create the validation file at the URL above with the content shown.")
+            validation_file = result['validation_files'][0]
+            print(f"\n=== Step 2: Manual Validation Required ===")
+            print(f"Domain: {validation_file['domain']}")
+            print(f"Validation File: {validation_file['filename']}")
+            print(f"Validation Content: {validation_file['content']}")
+            print(f"File Path: {validation_file.get('file_path', 'N/A')}")
+            print(f"\nPlease create the validation file at the path above with the content shown.")
             print(f"Then press Enter to continue with validation...")
 
             # In CI/automated testing, you might skip this manual step
             if not os.getenv("ZEROSSL_SKIP_MANUAL_VALIDATION"):
                 input("Press Enter when validation file is ready...")
 
-            # Step 3: Validate certificate
-            print(f"\n=== Validating certificate ===")
-            validation_result = action_module._validate_certificate(certificate_id)
+            # Step 3: Validate certificate (state='validate')
+            print(f"\n=== Step 3: Validating certificate ===")
+
+            # Configure task arguments for validation
+            validate_task_args = {
+                'api_key': zerossl_api_key,
+                'certificate_id': certificate_id,
+                'state': 'validate',
+                'validation_method': 'HTTP_CSR_HASH',
+                'timeout': integration_test_config['timeout']
+            }
+
+            live_action_base._task.args = validate_task_args
+
+            validation_result = action_module.run(task_vars=live_task_vars)
 
             # Note: This might take several attempts in real scenarios
             max_validation_attempts = 5
             for attempt in range(max_validation_attempts):
-                if validation_result.get('success'):
+                if validation_result.get('validation_result', {}).get('success'):
                     break
 
                 print(f"Validation attempt {attempt + 1} failed, retrying in 30 seconds...")
                 time.sleep(30)
-                validation_result = action_module._validate_certificate(certificate_id)
+                validation_result = action_module.run(task_vars=live_task_vars)
 
-            assert validation_result.get('success'), f"Validation failed after {max_validation_attempts} attempts"
-            print("Certificate validation successful!")
+            assert validation_result.get('validation_result', {}).get('success'), f"Validation failed after {max_validation_attempts} attempts"
+            print("Certificate validation triggered successfully!")
 
-            # Step 4: Wait for certificate issuance (can take a few minutes)
-            print(f"\n=== Waiting for certificate issuance ===")
+            # Step 4: Wait for certificate issuance (polling status)
+            print(f"\n=== Step 4: Waiting for certificate issuance ===")
             max_wait_time = integration_test_config['validation_timeout']
             wait_interval = 30
             waited = 0
 
+            # Use the certificate manager to poll status
+            from plugins.module_utils.zerossl.api_client import ZeroSSLAPIClient
+            from plugins.module_utils.zerossl.certificate_manager import CertificateManager
+
+            api_client = ZeroSSLAPIClient(zerossl_api_key)
+            cert_manager = CertificateManager(zerossl_api_key, api_client)
+
             while waited < max_wait_time:
-                cert_info = action_module._get_certificate_info(certificate_id)
+                cert_info = cert_manager.get_certificate_status(certificate_id)
                 status = cert_info['status']
                 print(f"Certificate status: {status} (waited {waited}s)")
 
                 if status == 'issued':
                     break
-                elif status == 'cancelled' or status == 'expired':
+                elif status in ['cancelled', 'expired', 'failed']:
                     pytest.fail(f"Certificate entered failure state: {status}")
 
                 time.sleep(wait_interval)
@@ -152,18 +168,36 @@ class TestLiveCertificateLifecycle:
 
             assert cert_info['status'] == 'issued', f"Certificate not issued within {max_wait_time} seconds"
 
-            # Step 5: Download certificate
-            print(f"\n=== Downloading certificate ===")
-            certificate_content = action_module._download_certificate(certificate_id)
+            # Step 5: Download certificate (state='download')
+            print(f"\n=== Step 5: Downloading certificate ===")
 
-            assert certificate_content
-            assert '-----BEGIN CERTIFICATE-----' in certificate_content
-            assert '-----END CERTIFICATE-----' in certificate_content
+            # Configure task arguments for download
+            download_task_args = {
+                'api_key': zerossl_api_key,
+                'certificate_id': certificate_id,
+                'certificate_path': str(cert_path),
+                'private_key_path': str(key_path),
+                'state': 'download',
+                'file_mode': '0644',
+                'timeout': integration_test_config['timeout']
+            }
 
-            # Save certificate to file
-            action_module._save_certificate(cert_path, certificate_content)
+            live_action_base._task.args = download_task_args
+
+            download_result = action_module.run(task_vars=live_task_vars)
+
+            assert download_result['changed'] is True
+            assert 'files_created' in download_result
+            assert str(cert_path) in download_result['files_created']
+
+            # Verify certificate file was created
             assert cert_path.exists()
             assert cert_path.stat().st_size > 0
+
+            # Verify certificate content
+            cert_content = cert_path.read_text()
+            assert '-----BEGIN CERTIFICATE-----' in cert_content
+            assert '-----END CERTIFICATE-----' in cert_content
 
             print(f"Certificate successfully downloaded to: {cert_path}")
             print(f"Certificate ID: {certificate_id}")
@@ -229,7 +263,7 @@ class TestLiveCertificateLifecycle:
             print(f"Certificate expires: {cert_info.get('expires', 'Unknown')}")
 
             # Test that plugin properly identifies existing certificate
-            assert cert_info['id'] == existing_cert_id
+            assert cert_info['certificate_id'] == existing_cert_id
         else:
             print("No existing certificate found - this is expected for fresh test domains")
 

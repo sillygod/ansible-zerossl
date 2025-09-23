@@ -132,7 +132,6 @@ class ValidationHandler:
         created_files = []
 
         try:
-            web_root_path = Path(web_root)
 
             for vf in validation_files:
                 # Construct full file path
@@ -143,7 +142,7 @@ class ValidationHandler:
                 file_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
                 # Write validation content
-                file_path_obj.write_text(vf['content'])
+                file_path_obj.write_text('\n'.join(vf['content']))
 
                 # Set appropriate permissions
                 file_path_obj.chmod(0o644)
@@ -432,66 +431,6 @@ class ValidationHandler:
         except Exception:
             pass  # Ignore errors in cleanup
 
-    def poll_validation_status(
-        self,
-        api_client,
-        certificate_id: str,
-        max_attempts: int = 30,
-        poll_interval: int = 10
-    ) -> Dict[str, Any]:
-        """
-        Poll certificate validation status until completion.
-
-        Args:
-            api_client: ZeroSSL API client instance
-            certificate_id: Certificate ID to poll
-            max_attempts: Maximum polling attempts
-            poll_interval: Seconds between polls
-
-        Returns:
-            Final validation status
-
-        Raises:
-            ZeroSSLTimeoutError: If polling times out
-            ZeroSSLValidationError: If validation fails
-        """
-        for attempt in range(max_attempts):
-            try:
-                cert_info = api_client.get_certificate(certificate_id)
-
-                # Check for completion
-                if cert_info['status'] == 'issued':
-                    return {
-                        'certificate_id': certificate_id,
-                        'final_status': 'issued',
-                        'validation_completed': True,
-                        'attempts': attempt + 1
-                    }
-
-                # Check for failure
-                failure_statuses = ['canceled', 'expired', 'failed']
-                if cert_info['status'] in failure_statuses:
-                    raise ZeroSSLValidationError(
-                        f"Certificate validation failed with status: {cert_info['status']}",
-                        validation_details={'final_status': cert_info['status']}
-                    )
-
-                # Continue polling
-                if attempt < max_attempts - 1:
-                    time.sleep(poll_interval)
-
-            except ZeroSSLValidationError:
-                raise
-            except Exception as e:
-                if attempt == max_attempts - 1:
-                    raise ZeroSSLValidationError(f"Validation polling failed: {e}")
-
-        # Timeout reached
-        raise ZeroSSLTimeoutError(
-            f"Validation polling timed out after {max_attempts} attempts",
-            timeout_duration=max_attempts * poll_interval,
-            operation="validation_polling"
-        )
 
     def aggregate_validation_errors(
         self,

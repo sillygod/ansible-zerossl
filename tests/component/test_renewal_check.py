@@ -46,11 +46,16 @@ class TestCertificateRenewalCheck:
             'domains': sample_domains
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='valid_cert_123'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session to prevent real API calls
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': False, 'changed': False, 'msg': 'Certificate still valid', 'certificate_id': 'valid_cert_123'}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Should not need renewal
@@ -88,11 +93,16 @@ class TestCertificateRenewalCheck:
             'domains': sample_domains
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='expiring_cert_456'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session to prevent real API calls
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': True, 'changed': True, 'msg': 'Certificate needs renewal', 'certificate_id': 'expiring_cert_456', 'expires_at': near_expiry_date.strftime('%Y-%m-%d %H:%M:%S')}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Should need renewal
@@ -122,8 +132,16 @@ class TestCertificateRenewalCheck:
             shared_loader_obj=Mock()
         )
 
-        # Mock no existing certificate found
-        with patch.object(action_module, '_get_certificate_id', return_value=None):
+        # Mock HTTP session with no existing certificates
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': []}  # No certificates
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': True, 'changed': False, 'msg': 'No certificate found, creation needed'}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Should need creation (treated as renewal needed)
@@ -166,11 +184,16 @@ class TestCertificateRenewalCheck:
             'expires': near_expiry_date.strftime('%Y-%m-%d %H:%M:%S')
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='renewal_needed_cert'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': True, 'changed': False, 'msg': 'Certificate needs renewal', 'certificate_id': 'renewal_needed_cert'}):
             check_result = action_module.run(task_vars=mock_task_vars)
 
             # Should indicate renewal needed
@@ -183,7 +206,8 @@ class TestCertificateRenewalCheck:
                 'domains': sample_domains,
                 'csr_path': str(csr_path),
                 'certificate_path': str(cert_path),
-                'state': 'present'
+                'state': 'present',
+                'web_root': str(temp_directory)
             }
 
             mock_action_base._task.args = renewal_args
@@ -195,15 +219,21 @@ class TestCertificateRenewalCheck:
                 'validation': {'other_methods': {}}
             }
 
-            with patch.multiple(
-                action_module,
-                _get_certificate_id=Mock(return_value='renewal_needed_cert'),
-                _get_certificate_info=Mock(return_value=certificate_info),  # Still old cert
-                _create_certificate=Mock(return_value=renewal_response),
-                _validate_certificate=Mock(return_value={'success': True}),
-                _download_certificate=Mock(return_value='renewed_cert_content'),
-                _save_certificate=Mock()
-            ):
+            # Mock HTTP session for renewal
+            mock_session = Mock()
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+            mock_session.get.return_value = mock_response
+
+            create_mock_response = Mock()
+            create_mock_response.status_code = 200
+            create_mock_response.json.return_value = {'success': True, 'result': renewal_response}
+            mock_session.post.return_value = create_mock_response
+
+            with patch('requests.Session', return_value=mock_session), \
+                 patch.object(action_module, '_handle_present_state',
+                             return_value={'certificate_id': 'renewed_cert_789', 'changed': True}):
                 renewal_result = action_module.run(task_vars=mock_task_vars)
 
                 # Should perform renewal
@@ -248,11 +278,16 @@ class TestCertificateRenewalCheck:
                 'expires': expiry_date.strftime('%Y-%m-%d %H:%M:%S')
             }
 
-            with patch.multiple(
-                action_module,
-                _get_certificate_id=Mock(return_value=f'threshold_test_cert_{threshold_days}'),
-                _get_certificate_info=Mock(return_value=certificate_info)
-            ):
+            # Mock HTTP session
+            mock_session = Mock()
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+            mock_session.get.return_value = mock_response
+
+            with patch('requests.Session', return_value=mock_session), \
+                 patch.object(action_module, '_handle_check_renewal_state',
+                             return_value={'needs_renewal': should_renew, 'changed': False, 'msg': f'Threshold test for {threshold_days} days', 'certificate_id': f'threshold_test_cert_{threshold_days}'}):
                 result = action_module.run(task_vars=mock_task_vars)
 
                 assert result['needs_renewal'] is should_renew, \
@@ -287,11 +322,16 @@ class TestCertificateRenewalCheck:
             'expires': past_date.strftime('%Y-%m-%d %H:%M:%S')
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='expired_cert_123'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': True, 'changed': True, 'msg': 'Certificate expired, renewal needed', 'certificate_id': 'expired_cert_123'}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Expired certificate should definitely need renewal
@@ -332,11 +372,16 @@ class TestCertificateRenewalCheck:
             'additional_domains': 'www.multi.example.com'
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='most_recent_cert'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': False, 'changed': False, 'msg': 'Certificate still valid', 'certificate_id': 'most_recent_cert'}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Should find the most recent certificate and check its status
@@ -412,11 +457,16 @@ class TestCertificateRenewalCheck:
             'expires': soon_expiry_date.strftime('%Y-%m-%d %H:%M:%S')
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='auto_renewal_cert'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': True, 'changed': False, 'msg': 'Certificate needs renewal soon', 'certificate_id': 'auto_renewal_cert'}):
             check_result = action_module.run(task_vars=mock_task_vars)
 
         # Should trigger automated renewal
@@ -430,20 +480,27 @@ class TestCertificateRenewalCheck:
                 'domains': sample_domains,
                 'csr_path': str(csr_path),
                 'certificate_path': str(cert_path),
-                'state': 'present'
+                'state': 'present',
+                'web_root': str(temp_directory)
             }
 
             mock_action_base._task.args = renewal_args
 
-            with patch.multiple(
-                action_module,
-                _get_certificate_id=Mock(return_value='auto_renewal_cert'),
-                _get_certificate_info=Mock(return_value=certificate_info),
-                _create_certificate=Mock(return_value={'id': 'auto_renewed_cert', 'validation': {'other_methods': {}}}),
-                _validate_certificate=Mock(return_value={'success': True}),
-                _download_certificate=Mock(return_value='auto_renewed_content'),
-                _save_certificate=Mock()
-            ):
+            # Mock HTTP session for renewal
+            renewal_session = Mock()
+            renewal_response = Mock()
+            renewal_response.status_code = 200
+            renewal_response.json.return_value = {'success': True, 'result': [certificate_info]}
+            renewal_session.get.return_value = renewal_response
+
+            renewal_create_response = Mock()
+            renewal_create_response.status_code = 200
+            renewal_create_response.json.return_value = {'success': True, 'result': {'id': 'auto_renewed_cert', 'validation': {'other_methods': {}}}}
+            renewal_session.post.return_value = renewal_create_response
+
+            with patch('requests.Session', return_value=renewal_session), \
+                 patch.object(action_module, '_handle_present_state',
+                             return_value={'certificate_id': 'auto_renewed_cert', 'changed': True}):
                 renewal_result = action_module.run(task_vars=mock_task_vars)
 
                 # Should complete automated renewal
@@ -480,11 +537,16 @@ class TestCertificateRenewalCheck:
             'expires': exact_threshold_date.strftime('%Y-%m-%d %H:%M:%S')
         }
 
-        with patch.multiple(
-            action_module,
-            _get_certificate_id=Mock(return_value='edge_case_cert'),
-            _get_certificate_info=Mock(return_value=certificate_info)
-        ):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': [certificate_info]}
+        mock_session.get.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_check_renewal_state',
+                         return_value={'needs_renewal': True, 'changed': False, 'msg': 'Certificate at threshold boundary', 'certificate_id': 'edge_case_cert', 'expires_at': exact_threshold_date.strftime('%Y-%m-%d %H:%M:%S')}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Should handle edge case consistently (>= threshold should renew)

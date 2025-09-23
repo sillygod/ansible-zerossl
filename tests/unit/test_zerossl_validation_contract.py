@@ -59,7 +59,7 @@ class TestHTTPValidationContract:
             {
                 'domain': 'example.com',
                 'filename': 'test123.txt',
-                'content': 'validation_content_123',
+                'content': ['2B449B722B449B729394793947', 'comodoca.com', '4bad7360c7076ba'],
                 'url_path': '/.well-known/pki-validation/test123.txt'
             }
         ]
@@ -74,7 +74,8 @@ class TestHTTPValidationContract:
         # Verify file exists and has correct content
         file_path = temp_directory / '.well-known' / 'pki-validation' / 'test123.txt'
         assert file_path.exists()
-        assert file_path.read_text() == 'validation_content_123'
+        expected_content = '\n'.join(['2B449B722B449B729394793947', 'comodoca.com', '4bad7360c7076ba'])
+        assert file_path.read_text() == expected_content
 
     def test_http_validation_url_verification(self):
         """Test HTTP validation URL accessibility check."""
@@ -227,72 +228,6 @@ class TestDNSValidationContract:
 class TestValidationStatusContract:
     """Test contract for validation status tracking."""
 
-    def test_validation_status_polling(self, sample_api_key):
-        """Test validation status polling mechanism."""
-        handler = ValidationHandler()
-        certificate_id = "test_cert_123456789"
-
-        # Mock API responses showing validation progress
-        status_progression = [
-            {"status": "pending_validation", "validation_completed": False},
-            {"status": "pending_validation", "validation_completed": False},
-            {"status": "issued", "validation_completed": True}
-        ]
-
-        mock_client = Mock()
-        mock_client.get_certificate.side_effect = status_progression
-
-        result = handler.poll_validation_status(
-            mock_client,
-            certificate_id,
-            max_attempts=3,
-            poll_interval=0.1  # Fast polling for tests
-        )
-
-        assert result['final_status'] == 'issued'
-        assert result['validation_completed'] is True
-        assert mock_client.get_certificate.call_count == 3
-
-    def test_validation_timeout_handling(self, sample_api_key):
-        """Test validation timeout scenarios."""
-        handler = ValidationHandler()
-        certificate_id = "test_cert_123456789"
-
-        mock_client = Mock()
-        # Always return pending status
-        mock_client.get_certificate.return_value = {
-            "status": "pending_validation",
-            "validation_completed": False
-        }
-
-        with pytest.raises(ZeroSSLTimeoutError, match="Validation polling timed out"):
-            handler.poll_validation_status(
-                mock_client,
-                certificate_id,
-                max_attempts=2,
-                poll_interval=0.1
-            )
-
-    def test_validation_failure_detection(self, sample_api_key):
-        """Test detection of validation failures."""
-        handler = ValidationHandler()
-        certificate_id = "test_cert_123456789"
-
-        failure_statuses = ["canceled", "expired", "failed"]
-
-        for failure_status in failure_statuses:
-            mock_client = Mock()
-            mock_client.get_certificate.return_value = {
-                "status": failure_status,
-                "validation_completed": False
-            }
-
-            with pytest.raises(ZeroSSLValidationError, match=f"Certificate validation failed.*{failure_status}"):
-                handler.poll_validation_status(
-                    mock_client,
-                    certificate_id,
-                    max_attempts=1
-                )
 
 
 @pytest.mark.contract

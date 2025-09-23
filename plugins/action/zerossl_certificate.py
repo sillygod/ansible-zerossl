@@ -635,18 +635,23 @@ class ActionModule(ActionBase):
                         return result
                     else:
                         # Certificate is valid but files need updating
-                        bundle = cert_manager.download_certificate(cert_id)
-                        files_created = self._save_certificate_bundle(bundle, params)
-                        result.update({
-                            'changed': True,
-                            'certificate_id': cert_id,
-                            'status': cert_info['status'],
-                            'domains': params['domains'],
-                            'expires': cert_info.get('expires'),
-                            'files_created': files_created,
-                            'msg': 'Certificate files updated'
-                        })
-                        return result
+                        if cert_info['status'] == 'issued':
+                            bundle = cert_manager.download_certificate(cert_id)
+                            files_created = self._save_certificate_bundle(bundle, params)
+                            result.update({
+                                'changed': True,
+                                'certificate_id': cert_id,
+                                'status': cert_info['status'],
+                                'domains': params['domains'],
+                                'expires': cert_info.get('expires'),
+                                'files_created': files_created,
+                                'msg': 'Certificate files updated'
+                            })
+                            return result
+                        else:
+                            # Certificate exists but not yet issued, continue with normal flow
+                            self.display.vv(f"Certificate {cert_id} not yet issued (status: {cert_info['status']}), continuing with certificate creation flow")
+                            # Fall through to certificate creation logic below
 
         # Need to create/renew certificate
         csr_content = self._get_csr_content(params)
@@ -684,7 +689,6 @@ class ActionModule(ActionBase):
 
                 # Wait for validation and download
                 cert_manager.poll_validation_status(
-                    cert_manager.api_client,
                     create_result['certificate_id'],
                     max_attempts=params['validation_timeout'] // 10
                 )
@@ -912,7 +916,7 @@ class ActionModule(ActionBase):
             if backup_files:
                 files_created.extend(backup_files)
 
-        file_mode = int(params['file_mode'], 8)  # Convert octal string to int
+        file_mode = params['file_mode']  # octal string to int in the plugin params validators.
 
         # Save certificate
         if params.get('certificate_path'):
@@ -992,6 +996,12 @@ class ActionModule(ActionBase):
             return False
 
         try:
+            # First check certificate status - only download if issued
+            cert_info = cert_manager.get_certificate_status(certificate_id)
+            if cert_info['status'] != 'issued':
+                # Certificate is not issued yet, files definitely need update when it becomes available
+                return True
+
             # Download current certificate to compare
             bundle = cert_manager.download_certificate(certificate_id)
 
@@ -1057,3 +1067,68 @@ class ActionModule(ActionBase):
                     self.display.warning(f"Failed to backup {file_path}: {e}")
 
         return backup_files
+
+    def _get_certificate_id(self, domain):
+        """
+        Get certificate ID for a specific domain.
+
+        This is a helper method used by integration tests to check for
+        existing certificates for test domains.
+
+        Args:
+            domain: Domain name to search for
+
+        Returns:
+            Certificate ID if found, None otherwise
+        """
+        try:
+            # Create a temporary API client for the lookup
+            # Note: This assumes api_key is available in task args
+            if hasattr(self, '_task') and self._task.args.get('api_key'):
+                api_client = ZeroSSLAPIClient(self._task.args['api_key'])
+                cert_manager = CertificateManager(
+                    api_key=self._task.args['api_key'],
+                    api_client=api_client
+                )
+
+                # Find certificate for the domain
+                return cert_manager.find_certificate_for_domains([domain])
+            else:
+                self.display.warning("No API key available for certificate lookup")
+                return None
+
+        except Exception as e:
+            self.display.vv(f"Error looking up certificate for {domain}: {e}")
+            return None
+
+    def _get_certificate_info(self, certificate_id):
+        """
+        Get certificate information by ID.
+
+        This is a helper method used by integration tests to retrieve
+        certificate details.
+
+        Args:
+            certificate_id: ZeroSSL certificate ID
+
+        Returns:
+            Certificate information dict
+        """
+        try:
+            # Create a temporary API client for the lookup
+            if hasattr(self, '_task') and self._task.args.get('api_key'):
+                api_client = ZeroSSLAPIClient(self._task.args['api_key'])
+                cert_manager = CertificateManager(
+                    api_key=self._task.args['api_key'],
+                    api_client=api_client
+                )
+
+                # Get certificate status
+                return cert_manager.get_certificate_status(certificate_id)
+            else:
+                self.display.warning("No API key available for certificate lookup")
+                return None
+
+        except Exception as e:
+            self.display.vv(f"Error getting certificate info for {certificate_id}: {e}")
+            return None

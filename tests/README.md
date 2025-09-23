@@ -12,7 +12,6 @@ tests/
 ├── fixtures/                # Test data and helpers
 ├── security/                # Security-focused tests
 ├── performance/             # Performance and load tests
-├── compatibility/           # Ansible version compatibility tests
 ├── conftest.py             # Shared test configuration
 └── README.md               # This file
 ```

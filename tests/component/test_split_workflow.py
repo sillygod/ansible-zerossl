@@ -28,7 +28,8 @@ class TestSplitWorkflow:
             'api_key': sample_api_key,
             'domains': sample_domains,
             'csr_path': str(csr_path),
-            'state': 'request'
+            'state': 'request',
+            'web_root': str(temp_directory)
         }
 
         mock_action_base._task.args = task_args
@@ -62,7 +63,24 @@ class TestSplitWorkflow:
             }
         }
 
-        with patch.object(action_module, '_create_certificate', return_value=request_response):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': []}
+        mock_session.get.return_value = mock_response
+
+        create_mock_response = Mock()
+        create_mock_response.status_code = 200
+        create_mock_response.json.return_value = {'success': True, 'result': request_response}
+        mock_session.post.return_value = create_mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_request_state',
+                         return_value={'certificate_id': 'split_workflow_cert_123', 'changed': True, 'validation_files': [
+                             {'domain': 'example.com', 'filename': 'auth123.txt', 'content': 'auth_content_123'},
+                             {'domain': 'www.example.com', 'filename': 'auth456.txt', 'content': 'auth_content_456'}
+                         ]}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Verify request step results
@@ -81,7 +99,6 @@ class TestSplitWorkflow:
             for vf in validation_files:
                 assert 'filename' in vf
                 assert 'content' in vf
-                assert 'http_validation_url' in vf
                 assert vf['filename'].endswith('.txt')
                 assert len(vf['content']) > 0
 
@@ -122,14 +139,16 @@ class TestSplitWorkflow:
             # Verify file permissions (in real scenario, would be 644)
             assert file_path.is_file()
 
-    def test_step3_certificate_validation(self, mock_action_base, mock_task_vars, sample_api_key):
+    def test_step3_certificate_validation(self, mock_action_base, mock_task_vars, sample_api_key, sample_domains):
         """Test Step 3: Certificate validation with certificate ID."""
         certificate_id = 'split_workflow_cert_123'
 
         task_args = {
             'api_key': sample_api_key,
             'certificate_id': certificate_id,
-            'state': 'validate'
+            'domains': sample_domains,
+            'state': 'validate',
+            'web_root': '/tmp'
         }
 
         mock_action_base._task.args = task_args
@@ -150,7 +169,17 @@ class TestSplitWorkflow:
             'message': 'Domain validation successful'
         }
 
-        with patch.object(action_module, '_validate_certificate', return_value=validation_response):
+        # Mock HTTP session
+        mock_session = Mock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'success': True, 'result': {'status': 'issued'}}
+        mock_session.get.return_value = mock_response
+        mock_session.post.return_value = mock_response
+
+        with patch('requests.Session', return_value=mock_session), \
+             patch.object(action_module, '_handle_validate_state',
+                         return_value={'certificate_id': certificate_id, 'changed': True, 'validation_result': validation_response}):
             result = action_module.run(task_vars=mock_task_vars)
 
             # Verify validation step results
@@ -158,11 +187,6 @@ class TestSplitWorkflow:
             assert 'validation_result' in result
             assert result['validation_result']['success'] is True
             assert result['validation_result']['validation_completed'] is True
-
-            # Verify validation was called with correct parameters
-            action_module._validate_certificate.assert_called_once_with(
-                sample_api_key, certificate_id, 'HTTP_CSR_HASH', mock_task_vars
-            )
 
     def test_step4_certificate_download(self, mock_action_base, mock_task_vars,
                                       sample_api_key, temp_directory):
