@@ -1,23 +1,46 @@
 # Makefile for Ansible ZeroSSL Plugin Development
 
-.PHONY: help install test test-unit test-integration test-contract test-slow lint format clean docs
+.PHONY: help install test test-unit test-integration test-contract test-component test-slow lint format clean docs \
+        coverage-automation quality-gates performance validate ci-simulation
 
 # Default target
 help:
-	@echo "Available targets:"
+	@echo "ZeroSSL Ansible Plugin Development Commands"
+	@echo "=========================================="
+	@echo ""
+	@echo "Setup Commands:"
 	@echo "  install          - Install development dependencies"
-	@echo "  test            - Run all tests"
-	@echo "  test-unit       - Run unit tests only"
+	@echo "  dev-setup        - Complete development environment setup"
+	@echo ""
+	@echo "Test Commands:"
+	@echo "  test             - Run all tests"
+	@echo "  test-unit        - Run unit tests only"
+	@echo "  test-component   - Run component tests only"
 	@echo "  test-integration - Run integration tests only"
-	@echo "  test-contract   - Run contract tests only"
-	@echo "  test-slow       - Run slow tests"
-	@echo "  test-network    - Run network-dependent tests"
-	@echo "  lint            - Run code linting"
-	@echo "  format          - Format code with black"
-	@echo "  type-check      - Run type checking with mypy"
-	@echo "  coverage        - Run tests with coverage report"
-	@echo "  clean           - Clean build artifacts"
-	@echo "  docs            - Build documentation"
+	@echo "  test-contract    - Run contract tests only"
+	@echo "  test-slow        - Run slow tests"
+	@echo "  test-network     - Run network-dependent tests"
+	@echo "  test-parallel    - Run tests in parallel"
+	@echo ""
+	@echo "Coverage Commands:"
+	@echo "  coverage         - Run tests with coverage report"
+	@echo "  coverage-automation - Run full coverage automation"
+	@echo ""
+	@echo "Quality Commands:"
+	@echo "  quality-gates    - Run test quality gates"
+	@echo "  performance      - Run performance validation"
+	@echo "  lint             - Run code linting"
+	@echo "  format           - Format code with black"
+	@echo "  type-check       - Run type checking with mypy"
+	@echo ""
+	@echo "CI/CD Commands:"
+	@echo "  validate         - Full validation (like CI)"
+	@echo "  ci-simulation    - Simulate CI pipeline locally"
+	@echo "  quick            - Quick development check"
+	@echo ""
+	@echo "Maintenance Commands:"
+	@echo "  clean            - Clean build artifacts"
+	@echo "  docs             - Build documentation"
 
 # Installation
 install:
@@ -29,7 +52,10 @@ test:
 	pytest -v
 
 test-unit:
-	pytest -v -m unit
+	pytest tests/unit/ -v
+
+test-component:
+	pytest tests/component/ -v
 
 test-integration:
 	pytest -v -m integration
@@ -59,10 +85,31 @@ type-check:
 
 # Coverage
 coverage:
-	pytest --cov=module_utils --cov=action_plugins --cov-report=html --cov-report=term-missing
+	pytest --cov=plugins.action --cov=plugins.module_utils --cov-report=html --cov-report=xml --cov-report=term-missing --cov-fail-under=80 --cov-branch
 
 coverage-xml:
-	pytest --cov=module_utils --cov=action_plugins --cov-report=xml
+	pytest --cov=plugins.action --cov=plugins.module_utils --cov-report=xml
+
+coverage-automation:
+	@echo "Running coverage automation..."
+	python scripts/coverage_automation.py
+
+# Quality Gates and Performance
+quality-gates:
+	@echo "Running test quality gates..."
+	python scripts/test_quality_gates.py
+
+performance:
+	@echo "Running performance validation..."
+	python scripts/performance_validation.py
+
+# CI/CD Simulation
+ci-simulation: quality-gates test-unit test-component coverage-automation
+	@echo "✅ CI simulation complete!"
+
+quick:
+	@echo "Running quick development check..."
+	pytest tests/unit/test_api_client.py tests/unit/test_certificate_manager.py -v
 
 # Cleanup
 clean:
@@ -74,7 +121,10 @@ clean:
 	rm -rf htmlcov/
 	rm -rf .mypy_cache/
 	rm -rf collections/
-	find . -type d -name __pycache__ -exec rm -rf {} +
+	rm -f coverage.xml coverage.json
+	rm -f quality_gate_results.json
+	rm -f performance_results.json
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 
 # Documentation
@@ -98,7 +148,8 @@ ansible-test-integration:
 check: lint type-check test-unit
 
 # Full validation
-validate: clean install lint type-check coverage
+validate: clean quality-gates performance test-unit test-component coverage-automation
+	@echo "✅ Full validation complete!"
 
 # Release preparation
 release-check: validate test docs

@@ -79,7 +79,7 @@ strict_equality = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --strict-config"
+addopts = "-ra -q --strict-markers --strict-config --cov=plugins --cov-report=term-missing --cov-report=html:htmlcov --cov-fail-under=80"
 testpaths = [
     "tests",
 ]
@@ -89,21 +89,30 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 markers = [
-    "unit: Unit tests",
+    "unit: Unit tests with HTTP boundary mocking only",
+    "component: Component tests with real workflow methods",
     "integration: Integration tests",
-    "contract: Contract tests",
-    "slow: Slow tests",
+    "contract: Contract validation tests",
+    "slow: Slow tests (>5 seconds)",
     "network: Tests requiring network access",
+    "parallel: Tests safe for parallel execution",
 ]
 
 [tool.coverage.run]
-source = ["module_utils", "action_plugins"]
+source = ["plugins"]
+branch = true
 omit = [
     "tests/*",
     "setup.py",
+    "*/conftest.py",
+    "*/fixtures/*",
+    "*/__init__.py",
 ]
 
 [tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -116,3 +125,10 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "ZeroSSL Plugin Test Coverage"
+
+[tool.coverage.xml]
+output = "coverage.xml"

@@ -50,10 +50,9 @@ specs/001-develop-an-ansible/     # Design documentation
 - Provide clear error messages and documentation
 
 ## Recent Changes
+- 002-the-original-test: Added Python 3.12+ + ansible>=8.0.0, requests>=2.31.0, cryptography>=41.0.0
 - Created comprehensive feature specification and implementation plan
 - Researched Ansible plugin standards and ZeroSSL API capabilities
-- Designed data models and API contracts
-- Established testing strategy and development approach
 
 <!-- AUTO-GENERATED CONTEXT - DO NOT EDIT BELOW THIS LINE -->
 <!-- END AUTO-GENERATED CONTEXT -->
