@@ -1,8 +1,8 @@
 
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Improved Test Design for ZeroSSL Plugin
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `002-the-original-test` | **Date**: 2025-09-23 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/002-the-original-test/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -31,23 +31,35 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-[Extract from feature spec: primary requirement + technical approach from research]
+Redesign unit and component tests to improve reliability by mocking only at HTTP boundaries, using real method signatures, and achieving 80% line coverage with 30-second execution time. Focus on testing actual code paths rather than over-mocking internal logic to catch real bugs instead of test design issues.
 
 ## Technical Context
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: Python 3.12+
+**Primary Dependencies**: ansible>=8.0.0, requests>=2.31.0, cryptography>=41.0.0
+**Storage**: File system (certificates, CSRs, validation files)
+**Testing**: pytest>=7.4.0, pytest-ansible>=4.0.0, pytest-mock>=3.11.0, coverage>=7.3.0
+**Target Platform**: Linux/macOS (Ansible control nodes)
+**Project Type**: single - Ansible plugin with modular architecture
+**Performance Goals**: 80% line coverage, <30 second test execution time
+**Constraints**: using current project tech stack, don't introduce any new library, mock only at HTTP boundary
+**Scale/Scope**: ~25 test files covering unit/component tests for ZeroSSL certificate lifecycle
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Initial Constitution Check**: PASS
+- ✅ No new libraries introduced (constraint met)
+- ✅ Uses existing test framework (pytest with current dependencies)
+- ✅ Test-first approach maintained (redesigning tests to be more effective)
+- ✅ Focuses on existing functionality improvement, not new features
+- ✅ Preserves current project architecture and dependencies
+
+**Post-Design Constitution Check**: PASS
+- ✅ Design maintains existing tech stack (pytest, requests-mock)
+- ✅ Test contracts follow TDD principles (tests define behavior)
+- ✅ No additional dependencies introduced in Phase 1 design
+- ✅ Coverage and performance contracts are measurable
+- ✅ Architecture preserves existing plugin structure
 
 ## Project Structure
 
@@ -99,7 +111,7 @@ ios/ or android/
 └── [platform-specific structure]
 ```
 
-**Structure Decision**: [DEFAULT to Option 1 unless Technical Context indicates web/mobile app]
+**Structure Decision**: Option 1 (Single project) - Ansible plugin with existing modular structure (plugins/, tests/)
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -160,18 +172,27 @@ ios/ or android/
 
 **Task Generation Strategy**:
 - Load `.specify/templates/tasks-template.md` as base
-- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
-- Each contract → contract test task [P]
-- Each entity → model creation task [P]
-- Each user story → integration test task
-- Implementation tasks to make tests pass
+- Generate tasks from test contracts and data model
+- Each test module in tests/unit/ → redesign task [P]
+- Each test module in tests/component/ → redesign task [P]
+- Coverage measurement setup → infrastructure task
+- Performance validation → verification task
+- Documentation updates → maintenance task
 
 **Ordering Strategy**:
-- TDD order: Tests before implementation
-- Dependency order: Models before services before UI
-- Mark [P] for parallel execution (independent files)
+- TDD order: Infrastructure setup first, then test redesign
+- Dependency order: Fixtures before individual tests before suites
+- Mark [P] for parallel execution (independent test files)
+- Sequential dependencies: coverage setup → test implementation → validation
 
-**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
+**Task Categories**:
+1. **Infrastructure Tasks**: Update conftest.py, create realistic fixtures
+2. **Test Redesign Tasks**: Convert each existing test file to improved design
+3. **Coverage Tasks**: Implement coverage measurement and reporting
+4. **Validation Tasks**: Verify performance and quality requirements
+5. **Documentation Tasks**: Update test documentation and guidelines
+
+**Estimated Output**: 15-20 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -195,18 +216,20 @@ ios/ or android/
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
-- [ ] Phase 3: Tasks generated (/tasks command)
-- [ ] Phase 4: Implementation complete
+- [x] Phase 0: Research complete (/plan command)
+- [x] Phase 1: Design complete (/plan command)
+- [x] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 3: Tasks generated (/tasks command)
+- [x] Phase 4.1: Setup Infrastructure implementation complete (T001-T004)
+- [ ] Phase 4.2: Contract Tests implementation (T005-T007)
+- [ ] Phase 4.3: Test Redesign implementation (T008-T028)
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
+- [x] Initial Constitution Check: PASS
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented
 
 ---
 *Based on Constitution v2.1.1 - See `/memory/constitution.md`*
