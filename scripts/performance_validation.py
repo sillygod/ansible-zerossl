@@ -102,14 +102,19 @@ class PerformanceValidator:
         """Measure coverage overhead by comparing with/without coverage."""
         print("Measuring coverage overhead...")
 
+        # Use a small subset for faster overhead measurement
+        test_subset = [
+            "tests/unit/test_api_client.py::TestZeroSSLAPIClientImproved::test_api_client_initialization_real",
+            "tests/unit/test_certificate_manager.py::TestCertificateManagerImproved::test_certificate_manager_initialization"
+        ]
+
         # Run without coverage
         start_time = time.time()
         cmd_no_cov = [
             sys.executable, "-m", "pytest",
-            "tests/unit/",
             "-q",
             "--disable-warnings"
-        ]
+        ] + test_subset
         subprocess.run(cmd_no_cov, cwd=self.project_root, capture_output=True)
         time_without_coverage = time.time() - start_time
 
@@ -117,12 +122,11 @@ class PerformanceValidator:
         start_time = time.time()
         cmd_with_cov = [
             sys.executable, "-m", "pytest",
-            "tests/unit/",
             "--cov=plugins.action",
             "--cov=plugins.module_utils",
             "-q",
             "--disable-warnings"
-        ]
+        ] + test_subset
         subprocess.run(cmd_with_cov, cwd=self.project_root, capture_output=True)
         time_with_coverage = time.time() - start_time
 

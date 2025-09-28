@@ -63,6 +63,13 @@ class MockBoundaryValidator:
             'subprocess.run',
             'subprocess.Popen',
 
+            # DNS operations (external network dependency)
+            'dns.resolver.Resolver',
+            'dns.resolver.resolve',
+            'dns.query',
+            'socket.gethostbyname',
+            'socket.getaddrinfo',
+
             # Ansible-specific external boundaries
             'ansible.module_utils.basic.AnsibleModule',
             'ansible.plugins.action.ActionBase',
@@ -319,6 +326,7 @@ class MockBoundaryValidator:
         for module_name, test_module in self.test_modules.items():
             test_methods = []
 
+            # Check module-level test functions
             for name in dir(test_module):
                 if name.startswith('test_'):
                     test_func = getattr(test_module, name)
@@ -326,6 +334,19 @@ class MockBoundaryValidator:
                         # Analyze if this test uses real methods
                         if self._test_uses_real_methods(test_func):
                             test_methods.append(name)
+
+                # Check test classes
+                elif name.startswith('Test') and hasattr(test_module, name):
+                    test_class = getattr(test_module, name)
+                    if inspect.isclass(test_class):
+                        # Look for test methods in the class
+                        for method_name in dir(test_class):
+                            if method_name.startswith('test_'):
+                                test_method = getattr(test_class, method_name)
+                                if callable(test_method):
+                                    # Analyze if this test uses real methods
+                                    if self._test_uses_real_methods(test_method):
+                                        test_methods.append(f"{name}.{method_name}")
 
             if test_methods:
                 real_method_tests[module_name] = test_methods

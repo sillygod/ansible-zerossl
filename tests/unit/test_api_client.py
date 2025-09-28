@@ -209,20 +209,14 @@ class TestZeroSSLAPIClientImproved:
         certificate_id = 'cert-123456789'
         mock_zip_content = b'PKarchive_content_here'
 
-        # Mock ZIP download response
-        import unittest.mock
-        mock_resp = unittest.mock.Mock()
-        mock_resp.status_code = 200
-        mock_resp.content = mock_zip_content
-        mock_resp.headers = {'Content-Type': 'application/zip'}
+        # Mock the specific download endpoint with ZIP content
+        mock_http_boundary(f'/certificates/{certificate_id}/download', mock_zip_content)
 
-        # Mock the specific download endpoint
-        with unittest.mock.patch('requests.Session.get', return_value=mock_resp):
-            # Call real download method
-            result = real_api_client.download_certificate(certificate_id)
+        # Call real download method
+        result = real_api_client.download_certificate(certificate_id)
 
-            assert result == mock_zip_content
-            assert isinstance(result, bytes)
+        assert result == mock_zip_content
+        assert isinstance(result, bytes)
 
     def test_real_error_handling_and_exception_types(self, mock_http_boundary, real_api_client,
                                                     sample_domains, sample_csr):
@@ -605,3 +599,25 @@ class TestZeroSSLAPIClientImproved:
         assert 'GET' in http_methods_used   # get_certificate, list_certificates
         assert http_methods_used.count('POST') == 3  # 3 POST operations
         assert http_methods_used.count('GET') == 2   # 2 GET operations
+
+    def test_cancel_certificate_real_method(self, mock_http_boundary, real_api_client):
+        """
+        Test cancel_certificate method with real business logic and HTTP boundary mocking.
+
+        This test validates certificate cancellation functionality.
+        """
+        certificate_id = "cancel_test_123"
+
+        # Mock HTTP boundary for certificate cancellation
+        mock_http_boundary(f'/certificates/{certificate_id}/cancel', {
+            'success': True,
+            'message': 'Certificate cancelled successfully'
+        })
+
+        # Test real cancel_certificate method
+        result = real_api_client.cancel_certificate(certificate_id)
+
+        # Verify the method returns proper structure
+        assert isinstance(result, dict)
+        assert result.get('success') is True
+        assert 'message' in result
