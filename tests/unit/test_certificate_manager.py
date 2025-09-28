@@ -345,42 +345,26 @@ class TestCertificateManagerImproved:
 
         realistic_zip_content = zip_buffer.getvalue()
 
-        # Mock HTTP download response with realistic ZIP
-        mock_response = {
-            'status_code': 200,
-            'content': realistic_zip_content,
-            'headers': {'Content-Type': 'application/zip'}
-        }
+        # Mock the specific download endpoint with ZIP content
+        mock_http_boundary(f'/certificates/{certificate_id}/download', realistic_zip_content)
 
-        # Set up mock to return ZIP content for download request
-        import unittest.mock
-        mock_resp = unittest.mock.Mock()
-        mock_resp.status_code = 200
-        mock_resp.content = realistic_zip_content
-        mock_resp.headers = {'Content-Type': 'application/zip'}
+        # Call real download method
+        result = real_certificate_manager.download_certificate(certificate_id)
 
-        # Mock the specific download endpoint
-        mock_http_boundary(f'/certificates/{certificate_id}/download', {}, status_code=200)
+        # Validate real ZIP processing business logic
+        assert 'certificate' in result
+        assert 'private_key' in result
+        assert 'ca_bundle' in result
+        assert 'full_chain' in result
 
-        # Patch the session.get to return our ZIP content
-        with unittest.mock.patch('requests.Session.get', return_value=mock_resp):
-            # Call real download method
-            result = real_certificate_manager.download_certificate(certificate_id)
+        # Validate certificate content from real ZIP processing
+        assert 'BEGIN CERTIFICATE' in result['certificate']
+        assert 'BEGIN PRIVATE KEY' in result['private_key']
+        assert 'BEGIN CERTIFICATE' in result['ca_bundle']
 
-            # Validate real ZIP processing business logic
-            assert 'certificate' in result
-            assert 'private_key' in result
-            assert 'ca_bundle' in result
-            assert 'full_chain' in result
-
-            # Validate certificate content from real ZIP processing
-            assert 'BEGIN CERTIFICATE' in result['certificate']
-            assert 'BEGIN PRIVATE KEY' in result['private_key']
-            assert 'BEGIN CERTIFICATE' in result['ca_bundle']
-
-            # Validate full chain creation logic
-            assert result['certificate'].strip() in result['full_chain']
-            assert result['ca_bundle'].strip() in result['full_chain']
+        # Validate full chain creation logic
+        assert result['certificate'].strip() in result['full_chain']
+        assert result['ca_bundle'].strip() in result['full_chain']
 
     def test_zip_processing_edge_cases_real_logic(self, real_certificate_manager):
         """
@@ -708,6 +692,45 @@ class TestCertificateManagerImproved:
 
             found_id = real_certificate_manager.find_certificate_for_domains(domains)
             assert found_id == CERTIFICATE_ISSUED_RESPONSE['id']
+
+    def test_poll_validation_status_real_method(self, mock_http_boundary, real_certificate_manager, mocker):
+        """
+        Test poll_validation_status method with real business logic and HTTP boundary mocking.
+
+        This test verifies the polling logic for domain validation status checking.
+        """
+        certificate_id = "test_cert_123"
+
+        # Mock time.sleep to avoid actual delays in tests
+        mock_sleep = mocker.patch('time.sleep')
+
+        # Mock HTTP boundary for validation status polling - return 'issued' to complete immediately
+        mock_http_boundary(f'/certificates/{certificate_id}', {
+            'id': certificate_id,
+            'status': 'issued',  # Use completion status to avoid infinite polling
+            'validation': {
+                'email_validation': {},
+                'other_methods': {
+                    'example.com': {
+                        'file_validation_url_http': 'http://example.com/.well-known/pki-validation/test.txt',
+                        'file_validation_content': ['test_content']
+                    }
+                }
+            }
+        })
+
+        # Test real poll_validation_status method with fast polling parameters
+        status = real_certificate_manager.poll_validation_status(
+            certificate_id,
+            max_attempts=3,  # Reduce attempts for testing
+            poll_interval=0.1  # Very short interval for testing
+        )
+
+        # Verify the method returns proper status structure
+        assert isinstance(status, dict)
+        assert 'final_status' in status
+        assert status['final_status'] == 'issued'
+        assert status['validation_completed'] is True
 
     def test_contract_compliance_method_signatures(self, real_certificate_manager, sample_domains, sample_csr):
         """

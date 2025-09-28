@@ -209,16 +209,31 @@ class TestExecutionContractValidation:
             pytest.fail(f"Expected methods not found in CertificateManager: {missing_methods}")
 
         # Verify each method has test coverage
-        # This is a simplified check - in practice we'd parse test files more thoroughly
         test_module_name = 'tests.unit.test_certificate_manager'
         if test_module_name in validator.test_modules:
             test_module = validator.test_modules[test_module_name]
-            test_names = [name for name in dir(test_module) if name.startswith('test_')]
+
+            # Extract test methods from test classes
+            test_names = []
+            for name, obj in inspect.getmembers(test_module):
+                if inspect.isclass(obj) and name.startswith('Test'):
+                    # Get all attributes from the class, not just bound methods
+                    for method_name in dir(obj):
+                        if method_name.startswith('test_') and callable(getattr(obj, method_name)):
+                            test_names.append(method_name)
 
             for method in expected_methods:
-                # Check if any test name contains the method name
-                has_test = any(method.replace('_', '').lower() in test_name.lower()
-                              for test_name in test_names)
+                # Check if any test name contains the method name using flexible matching
+                method_patterns = [
+                    method.replace('_', '').lower(),  # pollvalidationstatus
+                    method.lower(),                   # poll_validation_status
+                    method.replace('_', ''),          # pollvalidationstatus (case sensitive)
+                ]
+
+                has_test = any(
+                    any(pattern in test_name.lower() for pattern in method_patterns)
+                    for test_name in test_names
+                )
 
                 if not has_test:
                     pytest.fail(f"No test found for CertificateManager.{method}")
@@ -255,12 +270,28 @@ class TestExecutionContractValidation:
         test_module_name = 'tests.unit.test_api_client'
         if test_module_name in validator.test_modules:
             test_module = validator.test_modules[test_module_name]
-            test_names = [name for name in dir(test_module) if name.startswith('test_')]
+
+            # Extract test methods from test classes
+            test_names = []
+            for name, obj in inspect.getmembers(test_module):
+                if inspect.isclass(obj) and name.startswith('Test'):
+                    # Get all attributes from the class, not just bound methods
+                    for method_name in dir(obj):
+                        if method_name.startswith('test_') and callable(getattr(obj, method_name)):
+                            test_names.append(method_name)
 
             for method in expected_methods:
-                # Check if any test name contains the method name
-                has_test = any(method.replace('_', '').lower() in test_name.lower()
-                              for test_name in test_names)
+                # Check if any test name contains the method name using flexible matching
+                method_patterns = [
+                    method.replace('_', '').lower(),  # validatecertificate
+                    method.lower(),                   # validate_certificate
+                    method.replace('_', ''),          # validatecertificate (case sensitive)
+                ]
+
+                has_test = any(
+                    any(pattern in test_name.lower() for pattern in method_patterns)
+                    for test_name in test_names
+                )
 
                 if not has_test:
                     pytest.fail(f"No test found for ZeroSSLAPIClient.{method}")
@@ -306,7 +337,15 @@ class TestExecutionContractValidation:
         test_module_name = 'tests.unit.test_plugin_contract'
         if test_module_name in validator.test_modules:
             test_module = validator.test_modules[test_module_name]
-            test_names = [name for name in dir(test_module) if name.startswith('test_')]
+
+            # Extract test methods from test classes
+            test_names = []
+            for name, obj in inspect.getmembers(test_module):
+                if inspect.isclass(obj) and name.startswith('Test'):
+                    # Get all attributes from the class, not just bound methods
+                    for method_name in dir(obj):
+                        if method_name.startswith('test_') and callable(getattr(obj, method_name)):
+                            test_names.append(method_name)
 
             # Main run method should definitely have tests
             run_tests = [name for name in test_names if 'run' in name.lower()]

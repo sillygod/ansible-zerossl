@@ -357,9 +357,17 @@ def mock_http_boundary(mocker, mock_zerossl_api_responses):
                 default_headers.update(matched_config['headers'])
             mock_response.headers = default_headers
 
-            mock_response.json.return_value = matched_config['response_data']
-            import json
-            mock_response.content = json.dumps(matched_config['response_data']).encode()
+            # Handle binary vs JSON content
+            response_data = matched_config['response_data']
+            if isinstance(response_data, bytes):
+                # Binary content (like ZIP files)
+                mock_response.content = response_data
+                mock_response.json.side_effect = ValueError("No JSON object could be decoded")
+            else:
+                # JSON content
+                mock_response.json.return_value = response_data
+                import json
+                mock_response.content = json.dumps(response_data).encode()
             return mock_response
         # Default response for unmatched endpoints
         mock_response = Mock()
