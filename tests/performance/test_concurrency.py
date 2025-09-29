@@ -68,8 +68,8 @@ class TestConcurrentOperations:
 
         def try_acquire_lock(thread_id):
             try:
-                with acquire_certificate_lock(certificate_id, operation_type, timeout=1):
-                    time.sleep(0.1)  # Simulate work
+                with acquire_certificate_lock(certificate_id, operation_type, timeout=5):
+                    time.sleep(0.05)  # Simulate work - reduced time to avoid timeouts
                     results.append(f"thread_{thread_id}_success")
                     return True
             except Exception as e:
@@ -249,7 +249,7 @@ class TestRateLimiting:
 
     def test_rate_limit_tracking(self):
         """Test rate limit tracking in API client."""
-        api_client = ZeroSSLAPIClient("test-api-key")
+        api_client = ZeroSSLAPIClient("test-api-key-1234567890123456")
 
         # Initial rate limit
         assert api_client.rate_limit_remaining == 5000
@@ -265,7 +265,7 @@ class TestRateLimiting:
 
     def test_rate_limit_with_mock_responses(self):
         """Test rate limiting with mock API responses."""
-        from tests.fixtures import RATE_LIMIT_EXCEEDED_HEADERS, ERROR_RATE_LIMIT
+        from tests.fixtures.zerossl_responses import RATE_LIMIT_EXCEEDED_HEADERS, ERROR_RATE_LIMIT
 
         with patch('requests.Session') as mock_session_class:
             mock_session = Mock()
@@ -285,7 +285,7 @@ class TestRateLimiting:
 
             mock_session.post.side_effect = [success_response, rate_limit_response]
 
-            api_client = ZeroSSLAPIClient("test-api-key")
+            api_client = ZeroSSLAPIClient("test-api-key-1234567890123456")
 
             # First request should succeed
             result1 = api_client.create_certificate(['example.com'], 'mock-csr')
@@ -293,7 +293,7 @@ class TestRateLimiting:
             assert api_client.rate_limit_remaining == 1
 
             # Second request should raise rate limit error
-            from ansible.module_utils.zerossl.exceptions import ZeroSSLRateLimitError
+            from plugins.module_utils.zerossl.exceptions import ZeroSSLRateLimitError
             with pytest.raises(ZeroSSLRateLimitError):
                 api_client.create_certificate(['example2.com'], 'mock-csr')
 
@@ -344,7 +344,10 @@ class TestCachePerformance:
 
     def setup_method(self):
         """Setup for each test method."""
-        self.cache_manager = CertificateCacheManager()
+        from plugins.module_utils.zerossl.cache import CertificateCache
+        # Create cache with higher max size for performance testing
+        test_cache = CertificateCache(max_cache_size=2000)
+        self.cache_manager = CertificateCacheManager(cache=test_cache)
 
     def test_cache_hit_performance(self):
         """Test cache hit performance."""

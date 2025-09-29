@@ -240,7 +240,7 @@ PERFORMANCE_TEST_DATA = {
     'large_domain_list': [f'subdomain{i}.example.com' for i in range(100)],
     'concurrent_operations': [
         {'domains': [f'test{i}.example.com'], 'validation_method': 'HTTP_CSR_HASH'}
-        for i in range(10)
+        for i in range(25)  # Support up to 25 concurrent operations
     ],
     'rapid_api_calls': [
         {'action': 'create', 'delay': 0.1},

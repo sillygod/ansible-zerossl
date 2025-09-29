@@ -24,7 +24,24 @@ class ZeroSSLException(Exception):
 
     def __str__(self) -> str:
         if self.details:
-            details_str = ", ".join(f"{k}={v}" for k, v in self.details.items())
+            # Sanitize sensitive data in error messages
+            sanitized_details = {}
+            for k, v in self.details.items():
+                if isinstance(v, dict):
+                    # For nested dicts, sanitize known sensitive keys
+                    sanitized_v = {}
+                    for nested_k, nested_v in v.items():
+                        if nested_k.lower() in ('api_key', 'access_key', 'password', 'secret', 'token'):
+                            sanitized_v[nested_k] = '***'
+                        else:
+                            sanitized_v[nested_k] = nested_v
+                    sanitized_details[k] = sanitized_v
+                elif k.lower() in ('api_key', 'access_key', 'password', 'secret', 'token'):
+                    sanitized_details[k] = '***'
+                else:
+                    sanitized_details[k] = v
+
+            details_str = ", ".join(f"{k}={v}" for k, v in sanitized_details.items())
             return f"{self.message} ({details_str})"
         return self.message
 
