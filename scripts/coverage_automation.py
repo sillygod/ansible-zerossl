@@ -94,6 +94,10 @@ class CoverageAutomation:
 
         cmd = [
             sys.executable, "-m", "pytest",
+            "tests/unit/",
+            "tests/component/",
+            "tests/performance/",
+            "tests/security/",
             "--cov=plugins.action",
             "--cov=plugins.module_utils",
             "--cov-report=html:htmlcov",

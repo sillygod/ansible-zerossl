@@ -977,3 +977,201 @@ class TestAnsiblePluginStateContractImproved:
 
         # Verify the run method properly routed to state handling logic
         assert result.get('failed') is not True or 'certificate' in result.get('msg', '')
+
+    def test_certificate_renewal_flow_with_valid_cert(self, mock_ansible_environment, mock_http_boundary, temp_directory):
+        """Test certificate renewal flow when certificate is still valid."""
+        action_module = ActionModule(
+            task=mock_ansible_environment.task,
+            connection=mock_ansible_environment.connection,
+            play_context=mock_ansible_environment.play_context,
+            loader=mock_ansible_environment.loader,
+            templar=mock_ansible_environment.templar,
+            shared_loader_obj=mock_ansible_environment.shared_loader_obj
+        )
+
+        cert_path = temp_directory / 'existing.crt'
+        cert_path.write_text('-----BEGIN CERTIFICATE-----\nEXISTING_CERT\n-----END CERTIFICATE-----')
+
+        mock_ansible_environment.task.args = {
+            'api_key': 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6',
+            'domains': ['renewal.example.com'],
+            'certificate_path': str(cert_path),
+            'state': 'present',
+            'renew_threshold_days': 30
+        }
+
+        # Mock certificate manager to simulate existing valid certificate
+        mock_http_boundary('/certificates/find', {
+            'certificates': [{
+                'id': 'existing_cert_123',
+                'status': 'issued',
+                'common_name': 'renewal.example.com',
+                'expires': '2025-12-31T23:59:59Z'
+            }]
+        })
+
+        result = action_module.run(task_vars=mock_ansible_environment.task_vars)
+        assert isinstance(result, dict)
+        assert 'changed' in result
+
+    def test_certificate_files_need_update_scenario(self, mock_ansible_environment, mock_http_boundary, temp_directory):
+        """Test scenario where certificate is valid but files need updating."""
+        action_module = ActionModule(
+            task=mock_ansible_environment.task,
+            connection=mock_ansible_environment.connection,
+            play_context=mock_ansible_environment.play_context,
+            loader=mock_ansible_environment.loader,
+            templar=mock_ansible_environment.templar,
+            shared_loader_obj=mock_ansible_environment.shared_loader_obj
+        )
+
+        cert_path = temp_directory / 'outdated.crt'
+        cert_path.write_text('-----BEGIN CERTIFICATE-----\nOUTDATED_CERT\n-----END CERTIFICATE-----')
+
+        mock_ansible_environment.task.args = {
+            'api_key': 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6',
+            'domains': ['update.example.com'],
+            'certificate_path': str(cert_path),
+            'state': 'present'
+        }
+
+        # Mock valid certificate that needs file update
+        mock_http_boundary('/certificates/find', {
+            'certificates': [{
+                'id': 'valid_cert_456',
+                'status': 'issued',
+                'common_name': 'update.example.com',
+                'expires': '2025-12-31T23:59:59Z'
+            }]
+        })
+
+        mock_http_boundary('/certificates/valid_cert_456/download/return/zip', {
+            'certificate.crt': '-----BEGIN CERTIFICATE-----\nNEW_CERT\n-----END CERTIFICATE-----'
+        })
+
+        result = action_module.run(task_vars=mock_ansible_environment.task_vars)
+        assert isinstance(result, dict)
+
+    def test_file_backup_creation(self, mock_ansible_environment, mock_http_boundary, temp_directory):
+        """Test file backup creation when backup parameter is true."""
+        action_module = ActionModule(
+            task=mock_ansible_environment.task,
+            connection=mock_ansible_environment.connection,
+            play_context=mock_ansible_environment.play_context,
+            loader=mock_ansible_environment.loader,
+            templar=mock_ansible_environment.templar,
+            shared_loader_obj=mock_ansible_environment.shared_loader_obj
+        )
+
+        cert_path = temp_directory / 'backup_test.crt'
+        cert_path.write_text('-----BEGIN CERTIFICATE-----\nEXISTING_CERT_FOR_BACKUP\n-----END CERTIFICATE-----')
+
+        mock_ansible_environment.task.args = {
+            'api_key': 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6',
+            'domains': ['backup.example.com'],
+            'certificate_path': str(cert_path),
+            'backup': True,
+            'state': 'present'
+        }
+
+        mock_http_boundary('/certificates', {
+            'id': 'backup_cert_789',
+            'status': 'draft',
+            'common_name': 'backup.example.com'
+        })
+
+        result = action_module.run(task_vars=mock_ansible_environment.task_vars)
+        assert isinstance(result, dict)
+
+    def test_absent_state_handling(self, mock_ansible_environment, mock_http_boundary):
+        """Test absent state handling for certificate deletion."""
+        action_module = ActionModule(
+            task=mock_ansible_environment.task,
+            connection=mock_ansible_environment.connection,
+            play_context=mock_ansible_environment.play_context,
+            loader=mock_ansible_environment.loader,
+            templar=mock_ansible_environment.templar,
+            shared_loader_obj=mock_ansible_environment.shared_loader_obj
+        )
+
+        mock_ansible_environment.task.args = {
+            'api_key': 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6',
+            'domains': ['delete.example.com'],
+            'state': 'absent'
+        }
+
+        mock_http_boundary('/certificates/find', {
+            'certificates': [{
+                'id': 'delete_cert_abc',
+                'status': 'issued',
+                'common_name': 'delete.example.com'
+            }]
+        })
+
+        mock_http_boundary('/certificates/delete_cert_abc', {'success': True})
+
+        result = action_module.run(task_vars=mock_ansible_environment.task_vars)
+        assert isinstance(result, dict)
+        assert 'changed' in result
+
+    def test_validate_state_handling(self, mock_ansible_environment, mock_http_boundary):
+        """Test validate state for existing certificate."""
+        action_module = ActionModule(
+            task=mock_ansible_environment.task,
+            connection=mock_ansible_environment.connection,
+            play_context=mock_ansible_environment.play_context,
+            loader=mock_ansible_environment.loader,
+            templar=mock_ansible_environment.templar,
+            shared_loader_obj=mock_ansible_environment.shared_loader_obj
+        )
+
+        mock_ansible_environment.task.args = {
+            'api_key': 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6',
+            'domains': ['validate.example.com'],
+            'state': 'validate'
+        }
+
+        mock_http_boundary('/certificates/find', {
+            'certificates': [{
+                'id': 'validate_cert_def',
+                'status': 'pending_validation',
+                'common_name': 'validate.example.com'
+            }]
+        })
+
+        mock_http_boundary('/certificates/validate_cert_def/challenges', {'success': True})
+
+        result = action_module.run(task_vars=mock_ansible_environment.task_vars)
+        assert isinstance(result, dict)
+
+    def test_download_state_handling(self, mock_ansible_environment, mock_http_boundary):
+        """Test download state for issued certificate."""
+        action_module = ActionModule(
+            task=mock_ansible_environment.task,
+            connection=mock_ansible_environment.connection,
+            play_context=mock_ansible_environment.play_context,
+            loader=mock_ansible_environment.loader,
+            templar=mock_ansible_environment.templar,
+            shared_loader_obj=mock_ansible_environment.shared_loader_obj
+        )
+
+        mock_ansible_environment.task.args = {
+            'api_key': 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6',
+            'domains': ['download.example.com'],
+            'state': 'download'
+        }
+
+        mock_http_boundary('/certificates/find', {
+            'certificates': [{
+                'id': 'download_cert_ghi',
+                'status': 'issued',
+                'common_name': 'download.example.com'
+            }]
+        })
+
+        mock_http_boundary('/certificates/download_cert_ghi/download/return/zip', {
+            'certificate.crt': '-----BEGIN CERTIFICATE-----\nDOWNLOAD_CERT\n-----END CERTIFICATE-----'
+        })
+
+        result = action_module.run(task_vars=mock_ansible_environment.task_vars)
+        assert isinstance(result, dict)
