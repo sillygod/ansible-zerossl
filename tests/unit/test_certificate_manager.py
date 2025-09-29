@@ -774,3 +774,118 @@ class TestCertificateManagerImproved:
         find_sig = inspect.signature(real_certificate_manager.find_certificate_for_domains)
         find_params = list(find_sig.parameters.keys())
         assert 'domains' in find_params
+
+    def test_create_certificate_with_dns_validation(self, mock_http_boundary, real_certificate_manager, sample_domains, sample_csr):
+        """Test certificate creation with DNS validation method."""
+        # Mock ZeroSSL API response for DNS validation
+        mock_http_boundary('/certificates', {
+            'id': 'dns-cert-12345',
+            'common_name': 'dns-test.example.com',
+            'status': 'draft',
+            'validation': {
+                'other_methods': {
+                    'dns-test.example.com': {
+                        'cname_validation_p1': '_zerossl-challenge',
+                        'cname_validation_p2': 'dns-test.example.com',
+                        'cname_validation_p3': 'verification_token_12345'
+                    }
+                }
+            }
+        })
+
+        # Execute real create_certificate method with DNS validation
+        result = real_certificate_manager.create_certificate(
+            domains=sample_domains,
+            validation_method='DNS_CSR_HASH',
+            csr=sample_csr
+        )
+
+        # Verify DNS validation path was executed
+        assert result['validation_method'] == 'DNS_CSR_HASH'
+        assert 'dns_records' in result
+        assert result['created'] is True
+
+    def test_create_certificate_bundle_real_method(self, real_certificate_manager):
+        """Test certificate bundle creation with real method execution."""
+        # Test certificate bundle creation with correct parameters
+        certificate_content = '-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----'
+        private_key_content = '-----BEGIN PRIVATE KEY-----\nTEST_KEY\n-----END PRIVATE KEY-----'
+        ca_bundle_content = '-----BEGIN CERTIFICATE-----\nCA_CERT\n-----END CERTIFICATE-----'
+
+        # Execute real create_certificate_bundle method
+        bundle = real_certificate_manager.create_certificate_bundle(
+            certificate_content, private_key_content, ca_bundle_content
+        )
+
+        # Verify bundle creation
+        assert bundle is not None
+        assert hasattr(bundle, 'certificate')
+        assert hasattr(bundle, 'private_key')
+        assert hasattr(bundle, 'ca_bundle')
+
+    def test_private_methods_edge_cases(self, real_certificate_manager):
+        """Test private methods with edge cases for better coverage."""
+        # Test _days_until_expiry with correct date format
+        test_cert = {
+            'expires': '2025-12-31 23:59:59',
+            'status': 'issued'
+        }
+        days = real_certificate_manager._days_until_expiry(test_cert)
+        assert isinstance(days, int)
+
+        # Test _is_usable_status with various statuses
+        assert real_certificate_manager._is_usable_status('issued') is True
+        assert real_certificate_manager._is_usable_status('draft') is True  # draft is usable
+        assert real_certificate_manager._is_usable_status('expired') is False
+
+        # Test _is_valid_status with various statuses
+        assert real_certificate_manager._is_valid_status('issued') is True
+        assert real_certificate_manager._is_valid_status('invalid_status') is False
+
+    def test_domains_match_edge_cases(self, real_certificate_manager):
+        """Test _domains_match method with edge cases."""
+        # Test various domain matching scenarios
+        test_cert = {
+            'common_name': 'example.com',
+            'additional_domains': 'www.example.com,api.example.com'
+        }
+
+        # Test exact match
+        assert real_certificate_manager._domains_match(['example.com'], test_cert) is True
+
+        # Test multi-domain match
+        assert real_certificate_manager._domains_match(['example.com', 'www.example.com'], test_cert) is True
+
+        # Test no match
+        assert real_certificate_manager._domains_match(['different.com'], test_cert) is False
+
+    def test_zip_processing_error_scenarios(self, real_certificate_manager):
+        """Test _process_certificate_zip with error scenarios."""
+        # Test with invalid zip content
+        invalid_zip = b'not a zip file'
+
+        try:
+            result = real_certificate_manager._process_certificate_zip(invalid_zip)
+            # Should handle error gracefully
+            assert result is None or 'error' in result
+        except Exception as e:
+            # Should raise appropriate exception
+            assert 'zip' in str(e).lower() or 'invalid' in str(e).lower()
+
+    def test_certificate_creation_error_scenarios(self, mock_http_boundary, real_certificate_manager, sample_domains, sample_csr):
+        """Test error scenarios in certificate creation with real error handling."""
+        # Mock API error response
+        mock_http_boundary('/certificates', {'error': 'Invalid domain'}, status_code=400)
+
+        # Execute real method and expect proper error handling
+        try:
+            result = real_certificate_manager.create_certificate(
+                domains=sample_domains,
+                validation_method='HTTP_CSR_HASH',
+                csr=sample_csr
+            )
+            # If no exception, should have error info
+            assert result.get('error') or result.get('failed')
+        except Exception as e:
+            # Should properly handle and wrap API errors
+            assert 'invalid domain' in str(e).lower() or 'error' in str(e).lower()
