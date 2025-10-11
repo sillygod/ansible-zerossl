@@ -2,6 +2,8 @@
 
 A comprehensive Ansible collection for managing SSL certificates through the ZeroSSL API. This collection provides complete certificate lifecycle management including creation, validation, renewal, and deployment with enterprise-grade features.
 
+[![Test Automation and Quality Gates](https://github.com/sillygod/ansible-zerossl/actions/workflows/test-automation.yml/badge.svg)](https://github.com/sillygod/ansible-zerossl/actions/workflows/test-automation.yml)
+[![codecov](https://codecov.io/gh/sillygod/ansible-zerossl/branch/main/graph/badge.svg)](https://codecov.io/gh/sillygod/ansible-zerossl)
 [![GitHub release](https://img.shields.io/github/release/sillygod/ansible-zerossl.svg)](https://github.com/sillygod/ansible-zerossl/releases)
 [![License](https://img.shields.io/github/license/sillygod/ansible-zerossl.svg)](https://github.com/sillygod/ansible-zerossl/blob/main/LICENSE)
 
@@ -539,8 +541,11 @@ For detailed testing documentation, see [tests/README.md](tests/README.md).
 ```bash
 git clone https://github.com/sillygod/ansible-zerossl.git
 cd ansible-zerossl
+
 ./dev-setup.sh
 ```
+
+If you want to customize the ansible.cfg for your own settings, you can run =git update-index --skip-worktree ansible.cfg= to ignore changes.
 
 ### Running Tests
 

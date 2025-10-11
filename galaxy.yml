@@ -20,21 +20,120 @@ repository: https://github.com/sillygod/ansible-zerossl
 homepage: https://zerossl.com/
 issues: https://github.com/sillygod/ansible-zerossl/issues
 build_ignore:
-  - .git*
-  - .pytest_cache
-  - __pycache__
-  - "*.pyc"
-  - tests/
-  - specs/
-  - .claude/
-  - .qodo/
-  - .specify/
-  - venv/
-  - "*.egg-info"
-  - .gitignore
-  - dev-setup.sh
-  - setup.py
-  - pyproject.toml
-  - Makefile
-manifest:
-  omit_default_directives: false
+  # Version control
+  - ".git*"
+  - ".gitignore"
+  - "CLAUDE.md"
+
+  # Python artifacts
+  - "__pycache__*"
+  - "*.py[cod]"
+  - "*$py.class"
+  - "*.so"
+  - ".Python"
+  - "build*"
+  - "dist*"
+  - "downloads*"
+  - "eggs*"
+  - ".eggs*"
+  - "lib*"
+  - "lib648"
+  - "var*"
+  - "wheels*"
+  - "share/python-wheels*"
+  - "*.egg-info*"
+  - ".installed.cfg"
+  - "*.egg"
+  - "MANIFEST"
+
+  # Virtual environments
+  - ".env"
+  - ".venv"
+  - "env*"
+  - "venv*"
+
+  # IDE and editors
+  - ".vscode*"
+  - ".idea*"
+  - "*.swp"
+  - "*.swo"
+  - "*~"
+  - ".DS_Store"
+
+  # Testing
+  - ".pytest_cache*"
+  - ".coverage"
+  - ".coverage.*"
+  - "htmlcov*"
+  - ".tox*"
+  - ".cache"
+  - "nosetests.xml"
+  - "coverage.xml"
+  - "coverage.json"
+  - "*.cover"
+  - "*.py,cover"
+  - ".hypothesis*"
+  - "tests*"
+  - "test_output*"
+  - "test_results*"
+
+  # MyPy
+  - ".mypy_cache*"
+  - ".dmypy.json"
+  - "dmypy.json"
+
+  # Ansible specific
+  - "*.retry"
+  - ".ansible*"
+  - "ansible.log"
+  - ".vault_pass"
+
+  # Certificates and keys
+  - "*.pem"
+  - "*.key"
+  - "*.crt"
+  - "*.csr"
+  - "*.p12"
+  - "*.pfx"
+
+  # Temporary files
+  - "*.tmp"
+  - "*.temp"
+  - "/tmp*"
+  - ".tmp*"
+
+  # Local configuration
+  - "local_config.yml"
+  - ".env.local"
+  - "secrets.yml"
+
+  # Documentation builds
+  - "docs/_build*"
+  - "docs/.doctrees*"
+
+  # OS specific
+  - ".DS_Store?"
+  - "._*"
+  - ".Spotlight-V100"
+  - ".Trashes"
+  - "ehthumbs.db"
+  - "Thumbs.db"
+
+  # Backup files
+  - "*.bak"
+  - "*.backup"
+  - "collections*"
+
+  # Development and specification files
+  - "specs*"
+  - ".claude*"
+  - ".qodo*"
+  - ".specify*"
+  - "dev-setup.sh"
+  - "setup.py"
+  - "pyproject.toml"
+  - "Makefile"
+  - "performance_results.json"
+  - "quality_gate_results.json"
+  - ".python-version"
+  - "ansible.cfg"
