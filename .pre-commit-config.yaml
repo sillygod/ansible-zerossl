@@ -2,8 +2,43 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.5.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-added-large-files
+    -   id: check-yaml
+    -   id: check-toml
+    -   id: check-merge-conflict
+    -   id: mixed-line-ending
+
+# Generate requirements.txt from uv for CI/CD compatibility
+-   repo: local
+    hooks:
+    -   id: uv-export-requirements
+        name: Export requirements.txt from uv
+        entry: bash -c 'uv export --no-hashes --no-dev -o requirements.txt'
+        language: system
+        files: '(pyproject\.toml|uv\.lock)$'
+        pass_filenames: false
+    -   id: uv-export-dev-requirements
+        name: Export requirements-dev.txt from uv
+        entry: bash -c 'uv export --no-hashes --all-extras -o requirements-dev.txt'
+        language: system
+        files: '(pyproject\.toml|uv\.lock)$'
+        pass_filenames: false
+
+# Python code formatting
+-   repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+    -   id: black
+        language_version: python3.12
+
+# Python linting
+-   repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+    -   id: flake8
+        args: ['--max-line-length=100', '--extend-ignore=E203,W503,E402,F401,E501,F841']
+        exclude: '^tests/'  # Exclude test files, focus on new code quality

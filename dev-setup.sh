@@ -5,6 +5,17 @@ set -e
 
 echo "🚀 Setting up Ansible ZeroSSL Plugin development environment..."
 
+# Check for uv installation
+echo "📋 Checking for uv..."
+if ! command -v uv &> /dev/null; then
+    echo "⚠️  uv not found. Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
+    echo "✅ uv installed"
+else
+    echo "✅ uv found"
+fi
+
 # Check Python version
 echo "📋 Checking Python version..."
 python_version=$(python3 --version 2>&1 | awk '{print $2}')
@@ -17,30 +28,13 @@ if [[ "$(printf '%s\n' "$required_version" "$python_version" | sort -V | head -n
 fi
 echo "✅ Python version check passed: $python_version"
 
-# Create virtual environment
-echo "🐍 Creating virtual environment..."
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-    echo "✅ Virtual environment created"
-else
-    echo "ℹ️ Virtual environment already exists"
-fi
+# Sync dependencies with uv (creates venv automatically if needed)
+echo "📥 Installing dependencies with uv..."
+uv sync --all-extras
 
 # Activate virtual environment
 echo "🔄 Activating virtual environment..."
-source venv/bin/activate
-
-# Upgrade pip
-echo "📦 Upgrading pip..."
-pip install --upgrade pip
-
-# Install dependencies
-echo "📥 Installing dependencies..."
-pip install -r requirements.txt
-
-# Install development dependencies
-echo "🛠️ Installing development dependencies..."
-pip install -e .[dev]
+source .venv/bin/activate
 
 # Verify Ansible installation
 echo "🔍 Verifying Ansible installation..."
@@ -91,12 +85,14 @@ echo ""
 echo "🎉 Development environment setup complete!"
 echo ""
 echo "Next steps:"
-echo "1. Activate the virtual environment: source venv/bin/activate"
+echo "1. Activate the virtual environment: source .venv/bin/activate"
 echo "2. Add your ZeroSSL API key to inventory or vault"
 echo "3. Run tests: make test"
-echo "4. Start developing: implement T005-T038"
+echo "4. Start developing!"
 echo ""
 echo "Useful commands:"
+echo "  uv sync            - Sync dependencies"
+echo "  uv add --dev <pkg> - Add dev dependency"
 echo "  make help          - Show all available commands"
 echo "  make test          - Run all tests"
 echo "  make test-unit     - Run unit tests only"

@@ -20,8 +20,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from plugins.module_utils.zerossl.models import (
-    CertificateStatus, ValidationMethod, ValidationStatus, OperationState,
-    Certificate, DomainValidation, APICredentials, CertificateBundle
+    CertificateStatus,
+    ValidationMethod,
+    ValidationStatus,
+    OperationState,
+    Certificate,
+    DomainValidation,
+    APICredentials,
+    CertificateBundle,
 )
 
 
@@ -76,19 +82,19 @@ class TestCertificateReal:
     @pytest.fixture
     def mock_http_boundary(self, mocker):
         """Mock HTTP boundary for external API calls."""
-        return mocker.patch('requests.Session')
+        return mocker.patch("requests.Session")
 
     @pytest.fixture
     def sample_certificate_data(self):
         """Create realistic certificate data for testing."""
         return {
-            'id': 'zerossl-cert-12345',
-            'domains': ['example.com', 'www.example.com'],
-            'status': CertificateStatus.ISSUED,
-            'created_at': datetime(2023, 1, 1, 12, 0, 0),
-            'expires_at': datetime(2023, 4, 1, 12, 0, 0),
-            'validation_method': ValidationMethod.HTTP_01,
-            'certificate_path': '/etc/ssl/certs/example.com.pem'
+            "id": "zerossl-cert-12345",
+            "domains": ["example.com", "www.example.com"],
+            "status": CertificateStatus.ISSUED,
+            "created_at": datetime(2023, 1, 1, 12, 0, 0),
+            "expires_at": datetime(2023, 4, 1, 12, 0, 0),
+            "validation_method": ValidationMethod.HTTP_01,
+            "certificate_path": "/etc/ssl/certs/example.com.pem",
         }
 
     def test_certificate_real_initialization(self, sample_certificate_data):
@@ -101,14 +107,14 @@ class TestCertificateReal:
         cert = Certificate(**sample_certificate_data)
 
         # Verify real constructor behavior
-        assert cert.id == 'zerossl-cert-12345'
-        assert cert.domains == ['example.com', 'www.example.com']
-        assert cert.common_name == 'example.com'  # Real logic: first domain
+        assert cert.id == "zerossl-cert-12345"
+        assert cert.domains == ["example.com", "www.example.com"]
+        assert cert.common_name == "example.com"  # Real logic: first domain
         assert cert.status == CertificateStatus.ISSUED
-        assert cert.created_at == sample_certificate_data['created_at']
-        assert cert.expires_at == sample_certificate_data['expires_at']
+        assert cert.created_at == sample_certificate_data["created_at"]
+        assert cert.expires_at == sample_certificate_data["expires_at"]
         assert cert.validation_method == ValidationMethod.HTTP_01
-        assert cert.certificate_path == '/etc/ssl/certs/example.com.pem'
+        assert cert.certificate_path == "/etc/ssl/certs/example.com.pem"
 
     def test_certificate_domain_validation_real_logic(self):
         """
@@ -117,12 +123,12 @@ class TestCertificateReal:
         This exercises the real _validate_domains static method without mocking.
         """
         # Test valid domains with real validation
-        valid_domains = ['example.com', 'www.example.com', 'api.example.org']
+        valid_domains = ["example.com", "www.example.com", "api.example.org"]
         result = Certificate._validate_domains(valid_domains)
         assert result == valid_domains
 
         # Test wildcard domain validation
-        wildcard_domains = ['*.example.com']
+        wildcard_domains = ["*.example.com"]
         result = Certificate._validate_domains(wildcard_domains)
         assert result == wildcard_domains
 
@@ -132,7 +138,7 @@ class TestCertificateReal:
         assert "At least one domain is required" in str(exc_info.value)
 
         with pytest.raises(ValueError) as exc_info:
-            Certificate._validate_domains(['invalid..domain.com'])
+            Certificate._validate_domains(["invalid..domain.com"])
         assert "Invalid domain format" in str(exc_info.value)
 
     def test_certificate_business_logic_methods(self, sample_certificate_data):
@@ -147,20 +153,20 @@ class TestCertificateReal:
 
         # Test is_valid with draft certificate
         draft_data = sample_certificate_data.copy()
-        draft_data['status'] = CertificateStatus.DRAFT
+        draft_data["status"] = CertificateStatus.DRAFT
         draft_cert = Certificate(**draft_data)
         assert draft_cert.is_valid() is False
 
         # Test expiry logic with real datetime calculations
         current_time = datetime.utcnow()
         expired_data = sample_certificate_data.copy()
-        expired_data['expires_at'] = current_time - timedelta(days=1)
+        expired_data["expires_at"] = current_time - timedelta(days=1)
         expired_cert = Certificate(**expired_data)
         assert expired_cert.is_expired() is True
 
         # Test future expiry
         future_data = sample_certificate_data.copy()
-        future_data['expires_at'] = current_time + timedelta(days=30)
+        future_data["expires_at"] = current_time + timedelta(days=30)
         future_cert = Certificate(**future_data)
         assert future_cert.is_expired() is False
 
@@ -175,7 +181,7 @@ class TestCertificateReal:
 
         # Test certificate expiring in 15 days
         renewal_data = sample_certificate_data.copy()
-        renewal_data['expires_at'] = current_time + timedelta(days=15)
+        renewal_data["expires_at"] = current_time + timedelta(days=15)
         renewal_cert = Certificate(**renewal_data)
 
         # Real calculation: expires in 15 days, threshold 30 days
@@ -194,21 +200,21 @@ class TestCertificateReal:
         """
         current_time = datetime.utcnow()
         future_data = sample_certificate_data.copy()
-        future_data['expires_at'] = current_time + timedelta(days=30)
+        future_data["expires_at"] = current_time + timedelta(days=30)
         cert = Certificate(**future_data)
 
         result = cert.to_dict()
 
         # Verify real serialization output
-        assert result['id'] == 'zerossl-cert-12345'
-        assert result['domains'] == ['example.com', 'www.example.com']
-        assert result['common_name'] == 'example.com'
-        assert result['status'] == 'issued'  # Enum value serialized
-        assert result['validation_method'] == 'HTTP_CSR_HASH'
-        assert result['certificate_path'] == '/etc/ssl/certs/example.com.pem'
-        assert result['is_valid'] is True  # Real method call
-        assert result['is_expired'] is False  # Real method call
-        assert isinstance(result['days_until_expiry'], int)  # Real calculation
+        assert result["id"] == "zerossl-cert-12345"
+        assert result["domains"] == ["example.com", "www.example.com"]
+        assert result["common_name"] == "example.com"
+        assert result["status"] == "issued"  # Enum value serialized
+        assert result["validation_method"] == "HTTP_CSR_HASH"
+        assert result["certificate_path"] == "/etc/ssl/certs/example.com.pem"
+        assert result["is_valid"] is True  # Real method call
+        assert result["is_expired"] is False  # Real method call
+        assert isinstance(result["days_until_expiry"], int)  # Real calculation
 
     def test_certificate_from_zerossl_response_real_parsing(self):
         """
@@ -219,23 +225,23 @@ class TestCertificateReal:
         """
         # Realistic ZeroSSL API response
         api_response = {
-            'id': 'zerossl-api-12345',
-            'common_name': 'example.com',
-            'additional_domains': 'www.example.com, api.example.com, blog.example.com',
-            'status': 'issued',
-            'created': '2023-01-01 12:00:00',
-            'expires': '2023-04-01 12:00:00'
+            "id": "zerossl-api-12345",
+            "common_name": "example.com",
+            "additional_domains": "www.example.com, api.example.com, blog.example.com",
+            "status": "issued",
+            "created": "2023-01-01 12:00:00",
+            "expires": "2023-04-01 12:00:00",
         }
 
         cert = Certificate.from_zerossl_response(api_response)
 
         # Verify real parsing logic
-        assert cert.id == 'zerossl-api-12345'
-        assert cert.common_name == 'example.com'
-        assert 'example.com' in cert.domains
-        assert 'www.example.com' in cert.domains
-        assert 'api.example.com' in cert.domains
-        assert 'blog.example.com' in cert.domains
+        assert cert.id == "zerossl-api-12345"
+        assert cert.common_name == "example.com"
+        assert "example.com" in cert.domains
+        assert "www.example.com" in cert.domains
+        assert "api.example.com" in cert.domains
+        assert "blog.example.com" in cert.domains
         assert cert.status == CertificateStatus.ISSUED
         assert cert.validation_method == ValidationMethod.HTTP_01  # Default
 
@@ -247,29 +253,29 @@ class TestCertificateReal:
         """
         # Response with empty additional_domains
         response_empty_additional = {
-            'id': 'cert-123',
-            'common_name': 'single.example.com',
-            'additional_domains': '',
-            'status': 'pending_validation',
-            'created': '2023-01-01 00:00:00',
-            'expires': '2023-04-01 00:00:00'
+            "id": "cert-123",
+            "common_name": "single.example.com",
+            "additional_domains": "",
+            "status": "pending_validation",
+            "created": "2023-01-01 00:00:00",
+            "expires": "2023-04-01 00:00:00",
         }
 
         cert = Certificate.from_zerossl_response(response_empty_additional)
-        assert cert.domains == ['single.example.com']
+        assert cert.domains == ["single.example.com"]
         assert cert.status == CertificateStatus.PENDING_VALIDATION
 
         # Response without additional_domains field
         response_no_additional = {
-            'id': 'cert-456',
-            'common_name': 'simple.example.com',
-            'status': 'draft',
-            'created': '2023-02-01 15:30:00',
-            'expires': '2023-05-01 15:30:00'
+            "id": "cert-456",
+            "common_name": "simple.example.com",
+            "status": "draft",
+            "created": "2023-02-01 15:30:00",
+            "expires": "2023-05-01 15:30:00",
         }
 
         cert = Certificate.from_zerossl_response(response_no_additional)
-        assert cert.domains == ['simple.example.com']
+        assert cert.domains == ["simple.example.com"]
 
 
 @pytest.mark.unit
@@ -283,17 +289,20 @@ class TestDomainValidationReal:
         This exercises the real constructor and validation without mocking.
         """
         validation = DomainValidation(
-            domain='example.com',
+            domain="example.com",
             method=ValidationMethod.HTTP_01,
-            challenge_token='abc123token456',
-            challenge_url='http://example.com/.well-known/acme-challenge/abc123token456'
+            challenge_token="abc123token456",
+            challenge_url="http://example.com/.well-known/acme-challenge/abc123token456",
         )
 
         # Verify real initialization
-        assert validation.domain == 'example.com'
+        assert validation.domain == "example.com"
         assert validation.method == ValidationMethod.HTTP_01
-        assert validation.challenge_token == 'abc123token456'
-        assert validation.challenge_url == 'http://example.com/.well-known/acme-challenge/abc123token456'
+        assert validation.challenge_token == "abc123token456"
+        assert (
+            validation.challenge_url
+            == "http://example.com/.well-known/acme-challenge/abc123token456"
+        )
         assert validation.status == ValidationStatus.PENDING  # Default
         assert validation.validated_at is None
 
@@ -304,14 +313,14 @@ class TestDomainValidationReal:
         This exercises real constructor validation for DNS validation method.
         """
         validation = DomainValidation(
-            domain='example.com',
+            domain="example.com",
             method=ValidationMethod.DNS_01,
-            challenge_token='dns-token-789',
-            dns_record='_acme-challenge.example.com CNAME xyz123.zerossl.com'
+            challenge_token="dns-token-789",
+            dns_record="_acme-challenge.example.com CNAME xyz123.zerossl.com",
         )
 
         assert validation.method == ValidationMethod.DNS_01
-        assert validation.dns_record == '_acme-challenge.example.com CNAME xyz123.zerossl.com'
+        assert validation.dns_record == "_acme-challenge.example.com CNAME xyz123.zerossl.com"
         assert validation.challenge_url is None
 
     def test_domain_validation_real_validation_logic(self):
@@ -323,9 +332,9 @@ class TestDomainValidationReal:
         # Test HTTP validation missing URL
         with pytest.raises(ValueError) as exc_info:
             DomainValidation(
-                domain='example.com',
+                domain="example.com",
                 method=ValidationMethod.HTTP_01,
-                challenge_token='token',
+                challenge_token="token",
                 # Missing challenge_url
             )
         assert "Challenge URL is required for HTTP-01 validation" in str(exc_info.value)
@@ -333,9 +342,9 @@ class TestDomainValidationReal:
         # Test DNS validation missing record
         with pytest.raises(ValueError) as exc_info:
             DomainValidation(
-                domain='example.com',
+                domain="example.com",
                 method=ValidationMethod.DNS_01,
-                challenge_token='token',
+                challenge_token="token",
                 # Missing dns_record
             )
         assert "DNS record is required for DNS-01 validation" in str(exc_info.value)
@@ -343,10 +352,10 @@ class TestDomainValidationReal:
         # Test missing domain
         with pytest.raises(ValueError) as exc_info:
             DomainValidation(
-                domain='',
+                domain="",
                 method=ValidationMethod.HTTP_01,
-                challenge_token='token',
-                challenge_url='http://example.com/token'
+                challenge_token="token",
+                challenge_url="http://example.com/token",
             )
         assert "Domain is required" in str(exc_info.value)
 
@@ -357,10 +366,10 @@ class TestDomainValidationReal:
         This exercises real is_complete and mark_validated methods.
         """
         validation = DomainValidation(
-            domain='example.com',
+            domain="example.com",
             method=ValidationMethod.HTTP_01,
-            challenge_token='token',
-            challenge_url='http://example.com/token'
+            challenge_token="token",
+            challenge_url="http://example.com/token",
         )
 
         # Test initial state
@@ -383,24 +392,26 @@ class TestDomainValidationReal:
         """
         validated_time = datetime.utcnow()
         validation = DomainValidation(
-            domain='test.example.com',
+            domain="test.example.com",
             method=ValidationMethod.DNS_01,
-            challenge_token='dns-token',
-            dns_record='_acme-challenge.test.example.com CNAME validation.zerossl.com',
+            challenge_token="dns-token",
+            dns_record="_acme-challenge.test.example.com CNAME validation.zerossl.com",
             status=ValidationStatus.VALID,
-            validated_at=validated_time
+            validated_at=validated_time,
         )
 
         result = validation.to_dict()
 
         # Verify real serialization
-        assert result['domain'] == 'test.example.com'
-        assert result['method'] == 'DNS_CSR_HASH'
-        assert result['challenge_token'] == 'dns-token'
-        assert result['dns_record'] == '_acme-challenge.test.example.com CNAME validation.zerossl.com'
-        assert result['status'] == 'valid'
-        assert result['validated_at'] == validated_time.isoformat()
-        assert result['is_complete'] is True  # Real method call
+        assert result["domain"] == "test.example.com"
+        assert result["method"] == "DNS_CSR_HASH"
+        assert result["challenge_token"] == "dns-token"
+        assert (
+            result["dns_record"] == "_acme-challenge.test.example.com CNAME validation.zerossl.com"
+        )
+        assert result["status"] == "valid"
+        assert result["validated_at"] == validated_time.isoformat()
+        assert result["is_complete"] is True  # Real method call
 
 
 @pytest.mark.unit
@@ -415,13 +426,13 @@ class TestAPICredentialsReal:
         """
         reset_time = datetime.utcnow() + timedelta(hours=1)
         credentials = APICredentials(
-            api_key='real-zerossl-api-key-1234567890123456789',
+            api_key="real-zerossl-api-key-1234567890123456789",
             rate_limit_remaining=4500,
-            rate_limit_reset=reset_time
+            rate_limit_reset=reset_time,
         )
 
         # Verify real initialization
-        assert credentials.api_key == 'real-zerossl-api-key-1234567890123456789'
+        assert credentials.api_key == "real-zerossl-api-key-1234567890123456789"
         assert credentials.rate_limit_remaining == 4500
         assert credentials.rate_limit_reset == reset_time
 
@@ -431,7 +442,7 @@ class TestAPICredentialsReal:
 
         This exercises real default value assignment.
         """
-        credentials = APICredentials(api_key='valid-api-key-1234567890123456')
+        credentials = APICredentials(api_key="valid-api-key-1234567890123456")
 
         assert credentials.rate_limit_remaining == 5000  # Real default
         assert isinstance(credentials.rate_limit_reset, datetime)  # Real default
@@ -443,17 +454,17 @@ class TestAPICredentialsReal:
         This exercises the real _validate_api_key static method.
         """
         # Test minimum valid length
-        min_valid_key = 'a' * 20
+        min_valid_key = "a" * 20
         credentials = APICredentials(api_key=min_valid_key)
         assert credentials.api_key == min_valid_key
 
         # Test real validation errors
         with pytest.raises(ValueError) as exc_info:
-            APICredentials(api_key='')
+            APICredentials(api_key="")
         assert "API key is required" in str(exc_info.value)
 
         with pytest.raises(ValueError) as exc_info:
-            APICredentials(api_key='too-short')
+            APICredentials(api_key="too-short")
         assert "API key appears to be invalid (too short)" in str(exc_info.value)
 
     def test_api_credentials_rate_limit_logic_real_methods(self):
@@ -463,8 +474,7 @@ class TestAPICredentialsReal:
         This exercises real is_rate_limited and update_rate_limit methods.
         """
         credentials = APICredentials(
-            api_key='test-api-key-1234567890123456',
-            rate_limit_remaining=100
+            api_key="test-api-key-1234567890123456", rate_limit_remaining=100
         )
 
         # Test real rate limit checking
@@ -488,18 +498,17 @@ class TestAPICredentialsReal:
         This exercises real serialization that excludes sensitive data.
         """
         credentials = APICredentials(
-            api_key='sensitive-api-key-should-not-appear-1234567890',
-            rate_limit_remaining=2500
+            api_key="sensitive-api-key-should-not-appear-1234567890", rate_limit_remaining=2500
         )
 
         result = credentials.to_dict()
 
         # Verify real security logic
-        assert 'api_key' not in result  # Real security: key excluded
-        assert result['api_key_present'] is True  # Real logic: presence indicated
-        assert result['rate_limit_remaining'] == 2500
-        assert result['is_rate_limited'] is False  # Real method call
-        assert 'rate_limit_reset' in result
+        assert "api_key" not in result  # Real security: key excluded
+        assert result["api_key_present"] is True  # Real logic: presence indicated
+        assert result["rate_limit_remaining"] == 2500
+        assert result["is_rate_limited"] is False  # Real method call
+        assert "rate_limit_reset" in result
 
 
 @pytest.mark.unit
@@ -510,21 +519,21 @@ class TestCertificateBundleReal:
     def sample_pem_data(self):
         """Create realistic PEM data for testing."""
         return {
-            'certificate': '''-----BEGIN CERTIFICATE-----
+            "certificate": """-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAKoK/OvD8XAXMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
 BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
 aWRnaXRzIFB0eSBMdGQwHhcNMjMwMTAxMTIwMDAwWhcNMjQwMTAxMTIwMDAwWjBF
------END CERTIFICATE-----''',
-            'private_key': '''-----BEGIN PRIVATE KEY-----
+-----END CERTIFICATE-----""",
+            "private_key": """-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
 wVkwayYA+Lq6nKq3QLx3+uHfzHUGvQd84z4X3JNLr7s2VeEj1L3wlkQO1kAAAQDi
 MNZoqz2XRYe3VgQ5Pg6O6E8JN11GAeK3Z8nkZcjMlI4KQOCTlmK0jllkxSfK3vz3
------END PRIVATE KEY-----''',
-            'ca_bundle': '''-----BEGIN CERTIFICATE-----
+-----END PRIVATE KEY-----""",
+            "ca_bundle": """-----BEGIN CERTIFICATE-----
 MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF
 ADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6
 b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
------END CERTIFICATE-----'''
+-----END CERTIFICATE-----""",
         }
 
     @pytest.fixture
@@ -542,12 +551,12 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         bundle = CertificateBundle(**sample_pem_data)
 
         # Verify real initialization and validation
-        assert bundle.certificate == sample_pem_data['certificate']
-        assert bundle.private_key == sample_pem_data['private_key']
-        assert bundle.ca_bundle == sample_pem_data['ca_bundle']
+        assert bundle.certificate == sample_pem_data["certificate"]
+        assert bundle.private_key == sample_pem_data["private_key"]
+        assert bundle.ca_bundle == sample_pem_data["ca_bundle"]
 
         # Verify real full_chain logic
-        expected_full_chain = sample_pem_data['certificate'] + "\n" + sample_pem_data['ca_bundle']
+        expected_full_chain = sample_pem_data["certificate"] + "\n" + sample_pem_data["ca_bundle"]
         assert bundle.full_chain == expected_full_chain
 
     def test_certificate_bundle_custom_full_chain_real_logic(self, sample_pem_data):
@@ -556,11 +565,8 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
 
         This exercises real full_chain assignment logic.
         """
-        custom_full_chain = 'custom-full-chain-content-with-both-cert-and-ca'
-        bundle = CertificateBundle(
-            **sample_pem_data,
-            full_chain=custom_full_chain
-        )
+        custom_full_chain = "custom-full-chain-content-with-both-cert-and-ca"
+        bundle = CertificateBundle(**sample_pem_data, full_chain=custom_full_chain)
 
         assert bundle.full_chain == custom_full_chain
 
@@ -574,24 +580,26 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         valid_bundle = CertificateBundle(**sample_pem_data)
 
         # Verify content is properly validated and stripped
-        assert valid_bundle.certificate.startswith('-----BEGIN CERTIFICATE-----')
-        assert valid_bundle.certificate.endswith('-----END CERTIFICATE-----')
+        assert valid_bundle.certificate.startswith("-----BEGIN CERTIFICATE-----")
+        assert valid_bundle.certificate.endswith("-----END CERTIFICATE-----")
 
         # Test real validation errors
         invalid_data = sample_pem_data.copy()
-        invalid_data['certificate'] = ''
+        invalid_data["certificate"] = ""
 
         with pytest.raises(ValueError) as exc_info:
             CertificateBundle(**invalid_data)
         assert "certificate content is required" in str(exc_info.value)
 
         # Test invalid PEM format
-        invalid_data['certificate'] = 'not a valid PEM certificate'
+        invalid_data["certificate"] = "not a valid PEM certificate"
         with pytest.raises(ValueError) as exc_info:
             CertificateBundle(**invalid_data)
         assert "Invalid PEM format for certificate" in str(exc_info.value)
 
-    def test_certificate_bundle_save_to_files_real_filesystem(self, sample_pem_data, temp_directory):
+    def test_certificate_bundle_save_to_files_real_filesystem(
+        self, sample_pem_data, temp_directory
+    ):
         """
         Test CertificateBundle save_to_files with real filesystem operations.
 
@@ -600,10 +608,10 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         """
         bundle = CertificateBundle(**sample_pem_data)
 
-        cert_path = os.path.join(temp_directory, 'cert.pem')
-        key_path = os.path.join(temp_directory, 'key.pem')
-        ca_path = os.path.join(temp_directory, 'ca.pem')
-        full_chain_path = os.path.join(temp_directory, 'fullchain.pem')
+        cert_path = os.path.join(temp_directory, "cert.pem")
+        key_path = os.path.join(temp_directory, "key.pem")
+        ca_path = os.path.join(temp_directory, "ca.pem")
+        full_chain_path = os.path.join(temp_directory, "fullchain.pem")
 
         # Exercise real file saving logic
         result = bundle.save_to_files(
@@ -611,7 +619,7 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
             key_path=key_path,
             ca_path=ca_path,
             full_chain_path=full_chain_path,
-            file_mode=0o644
+            file_mode=0o644,
         )
 
         # Verify real file creation
@@ -621,18 +629,18 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         assert os.path.exists(full_chain_path)
 
         # Verify real file contents
-        with open(cert_path, 'r') as f:
-            assert f.read() == sample_pem_data['certificate']
+        with open(cert_path, "r") as f:
+            assert f.read() == sample_pem_data["certificate"]
 
-        with open(key_path, 'r') as f:
-            assert f.read() == sample_pem_data['private_key']
+        with open(key_path, "r") as f:
+            assert f.read() == sample_pem_data["private_key"]
 
         # Verify real return value
         expected_files = {
-            'certificate': cert_path,
-            'private_key': key_path,
-            'ca_bundle': ca_path,
-            'full_chain': full_chain_path
+            "certificate": cert_path,
+            "private_key": key_path,
+            "ca_bundle": ca_path,
+            "full_chain": full_chain_path,
         }
         assert result == expected_files
 
@@ -641,7 +649,9 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         key_mode = key_stat.st_mode & 0o777
         assert key_mode == 0o600
 
-    def test_certificate_bundle_save_to_files_without_full_chain(self, sample_pem_data, temp_directory):
+    def test_certificate_bundle_save_to_files_without_full_chain(
+        self, sample_pem_data, temp_directory
+    ):
         """
         Test CertificateBundle save_to_files without full chain path.
 
@@ -649,19 +659,19 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         """
         bundle = CertificateBundle(**sample_pem_data)
 
-        cert_path = os.path.join(temp_directory, 'cert.pem')
-        key_path = os.path.join(temp_directory, 'key.pem')
-        ca_path = os.path.join(temp_directory, 'ca.pem')
+        cert_path = os.path.join(temp_directory, "cert.pem")
+        key_path = os.path.join(temp_directory, "key.pem")
+        ca_path = os.path.join(temp_directory, "ca.pem")
 
         result = bundle.save_to_files(
             cert_path=cert_path,
             key_path=key_path,
-            ca_path=ca_path
+            ca_path=ca_path,
             # No full_chain_path
         )
 
         # Verify real conditional logic
-        assert 'full_chain' not in result
+        assert "full_chain" not in result
         assert len(result) == 3
 
     def test_certificate_bundle_to_dict_real_security_logic(self, sample_pem_data):
@@ -675,15 +685,15 @@ b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL
         result = bundle.to_dict()
 
         # Verify real security logic
-        assert result['certificate'] == sample_pem_data['certificate']
-        assert result['private_key'] == '[REDACTED]'  # Real security: key redacted
-        assert result['ca_bundle'] == sample_pem_data['ca_bundle']
-        assert result['full_chain'] == bundle.full_chain
+        assert result["certificate"] == sample_pem_data["certificate"]
+        assert result["private_key"] == "[REDACTED]"  # Real security: key redacted
+        assert result["ca_bundle"] == sample_pem_data["ca_bundle"]
+        assert result["full_chain"] == bundle.full_chain
 
         # Verify real length calculations
-        assert result['certificate_length'] == len(sample_pem_data['certificate'])
-        assert result['private_key_length'] == len(sample_pem_data['private_key'])
-        assert result['ca_bundle_length'] == len(sample_pem_data['ca_bundle'])
+        assert result["certificate_length"] == len(sample_pem_data["certificate"])
+        assert result["private_key_length"] == len(sample_pem_data["private_key"])
+        assert result["ca_bundle_length"] == len(sample_pem_data["ca_bundle"])
 
 
 @pytest.mark.unit
@@ -698,12 +708,12 @@ class TestModelsIntegrationReal:
         """
         # Create certificate for domain
         cert = Certificate(
-            id='integration-cert-123',
-            domains=['integration.example.com', 'www.integration.example.com'],
+            id="integration-cert-123",
+            domains=["integration.example.com", "www.integration.example.com"],
             status=CertificateStatus.PENDING_VALIDATION,
             created_at=datetime.utcnow(),
             expires_at=datetime.utcnow() + timedelta(days=90),
-            validation_method=ValidationMethod.HTTP_01
+            validation_method=ValidationMethod.HTTP_01,
         )
 
         # Create domain validations for certificate domains
@@ -713,7 +723,7 @@ class TestModelsIntegrationReal:
                 domain=domain,
                 method=cert.validation_method,
                 challenge_token=f'token-{domain.replace(".", "-")}',
-                challenge_url=f'http://{domain}/.well-known/acme-challenge/token-{domain.replace(".", "-")}'
+                challenge_url=f'http://{domain}/.well-known/acme-challenge/token-{domain.replace(".", "-")}',
             )
             validations.append(validation)
 
@@ -729,8 +739,7 @@ class TestModelsIntegrationReal:
         This exercises real rate limiting logic without mocking.
         """
         credentials = APICredentials(
-            api_key='production-api-key-1234567890123456789012',
-            rate_limit_remaining=10
+            api_key="production-api-key-1234567890123456789012", rate_limit_remaining=10
         )
 
         # Simulate API calls with real rate limit logic
@@ -754,33 +763,33 @@ class TestModelsIntegrationReal:
         """
         # Create certificate model
         cert = Certificate(
-            id='bundle-cert-456',
-            domains=['bundle.example.com'],
+            id="bundle-cert-456",
+            domains=["bundle.example.com"],
             status=CertificateStatus.ISSUED,
             created_at=datetime.utcnow() - timedelta(days=1),
             expires_at=datetime.utcnow() + timedelta(days=89),
-            validation_method=ValidationMethod.DNS_01
+            validation_method=ValidationMethod.DNS_01,
         )
 
         # Create bundle with real PEM data
         pem_data = {
-            'certificate': '''-----BEGIN CERTIFICATE-----
+            "certificate": """-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAKoK/bundle/example/cert
------END CERTIFICATE-----''',
-            'private_key': '''-----BEGIN PRIVATE KEY-----
+-----END CERTIFICATE-----""",
+            "private_key": """-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7bundle
------END PRIVATE KEY-----''',
-            'ca_bundle': '''-----BEGIN CERTIFICATE-----
+-----END PRIVATE KEY-----""",
+            "ca_bundle": """-----BEGIN CERTIFICATE-----
 MIIDQTCCAimgAwIBAgITBmyfz5m/bundle/ca/cert
------END CERTIFICATE-----'''
+-----END CERTIFICATE-----""",
         }
 
         bundle = CertificateBundle(**pem_data)
 
         # Verify real integration
         assert cert.is_valid() is True
-        assert bundle.certificate.startswith('-----BEGIN CERTIFICATE-----')
-        assert '[REDACTED]' in bundle.to_dict()['private_key']
+        assert bundle.certificate.startswith("-----BEGIN CERTIFICATE-----")
+        assert "[REDACTED]" in bundle.to_dict()["private_key"]
 
         # Real business logic: certificate and bundle should be for same domains
         # (This would be validated in real application logic)

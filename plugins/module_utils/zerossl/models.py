@@ -14,6 +14,7 @@ import re
 
 class CertificateStatus(Enum):
     """Certificate status enumeration matching ZeroSSL API responses."""
+
     DRAFT = "draft"
     PENDING_VALIDATION = "pending_validation"
     ISSUED = "issued"
@@ -23,12 +24,14 @@ class CertificateStatus(Enum):
 
 class ValidationMethod(Enum):
     """Validation method enumeration matching ZeroSSL API formats."""
+
     HTTP_01 = "HTTP_CSR_HASH"
     DNS_01 = "DNS_CSR_HASH"
 
 
 class ValidationStatus(Enum):
     """Domain validation status enumeration."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     VALID = "valid"
@@ -37,6 +40,7 @@ class ValidationStatus(Enum):
 
 class OperationState(Enum):
     """Plugin operation state enumeration."""
+
     PRESENT = "present"
     REQUEST = "request"
     VALIDATE = "validate"
@@ -68,7 +72,7 @@ class Certificate:
         created_at: datetime,
         expires_at: datetime,
         validation_method: ValidationMethod,
-        certificate_path: Optional[str] = None
+        certificate_path: Optional[str] = None,
     ):
         self.id = id
         self.domains = self._validate_domains(domains)
@@ -86,7 +90,7 @@ class Certificate:
             raise ValueError("At least one domain is required")
 
         domain_pattern = re.compile(
-            r'^(?!-)[A-Za-z0-9-*]{1,63}(?<!-)\.?(?:[A-Za-z0-9-*]{1,63}(?<!-)\.)*[A-Za-z]{2,}$'
+            r"^(?!-)[A-Za-z0-9-*]{1,63}(?<!-)\.?(?:[A-Za-z0-9-*]{1,63}(?<!-)\.)*[A-Za-z]{2,}$"
         )
 
         for domain in domains:
@@ -115,42 +119,42 @@ class Certificate:
     def to_dict(self) -> Dict[str, Any]:
         """Convert certificate to dictionary representation."""
         return {
-            'id': self.id,
-            'domains': self.domains,
-            'common_name': self.common_name,
-            'status': self.status.value,
-            'created_at': self.created_at.isoformat(),
-            'expires_at': self.expires_at.isoformat(),
-            'validation_method': self.validation_method.value,
-            'certificate_path': self.certificate_path,
-            'is_valid': self.is_valid(),
-            'is_expired': self.is_expired(),
-            'days_until_expiry': self.days_until_expiry()
+            "id": self.id,
+            "domains": self.domains,
+            "common_name": self.common_name,
+            "status": self.status.value,
+            "created_at": self.created_at.isoformat(),
+            "expires_at": self.expires_at.isoformat(),
+            "validation_method": self.validation_method.value,
+            "certificate_path": self.certificate_path,
+            "is_valid": self.is_valid(),
+            "is_expired": self.is_expired(),
+            "days_until_expiry": self.days_until_expiry(),
         }
 
     @classmethod
-    def from_zerossl_response(cls, response: Dict[str, Any]) -> 'Certificate':
+    def from_zerossl_response(cls, response: Dict[str, Any]) -> "Certificate":
         """Create Certificate instance from ZeroSSL API response."""
         # Parse dates
-        created_at = datetime.strptime(response['created'], '%Y-%m-%d %H:%M:%S')
-        expires_at = datetime.strptime(response['expires'], '%Y-%m-%d %H:%M:%S')
+        created_at = datetime.strptime(response["created"], "%Y-%m-%d %H:%M:%S")
+        expires_at = datetime.strptime(response["expires"], "%Y-%m-%d %H:%M:%S")
 
         # Extract domains
-        domains = [response['common_name']]
-        if response.get('additional_domains'):
-            additional = response['additional_domains'].split(',')
+        domains = [response["common_name"]]
+        if response.get("additional_domains"):
+            additional = response["additional_domains"].split(",")
             domains.extend([d.strip() for d in additional if d.strip()])
 
         # Determine validation method (default to HTTP)
         validation_method = ValidationMethod.HTTP_01
 
         return cls(
-            id=response['id'],
+            id=response["id"],
             domains=domains,
-            status=CertificateStatus(response['status']),
+            status=CertificateStatus(response["status"]),
             created_at=created_at,
             expires_at=expires_at,
-            validation_method=validation_method
+            validation_method=validation_method,
         )
 
 
@@ -176,7 +180,7 @@ class DomainValidation:
         challenge_url: Optional[str] = None,
         dns_record: Optional[str] = None,
         status: ValidationStatus = ValidationStatus.PENDING,
-        validated_at: Optional[datetime] = None
+        validated_at: Optional[datetime] = None,
     ):
         self.domain = domain
         self.method = method
@@ -214,14 +218,14 @@ class DomainValidation:
     def to_dict(self) -> Dict[str, Any]:
         """Convert domain validation to dictionary representation."""
         return {
-            'domain': self.domain,
-            'method': self.method.value,
-            'challenge_token': self.challenge_token,
-            'challenge_url': self.challenge_url,
-            'dns_record': self.dns_record,
-            'status': self.status.value,
-            'validated_at': self.validated_at.isoformat() if self.validated_at else None,
-            'is_complete': self.is_complete()
+            "domain": self.domain,
+            "method": self.method.value,
+            "challenge_token": self.challenge_token,
+            "challenge_url": self.challenge_url,
+            "dns_record": self.dns_record,
+            "status": self.status.value,
+            "validated_at": self.validated_at.isoformat() if self.validated_at else None,
+            "is_complete": self.is_complete(),
         }
 
 
@@ -239,7 +243,7 @@ class APICredentials:
         self,
         api_key: str,
         rate_limit_remaining: int = 5000,
-        rate_limit_reset: Optional[datetime] = None
+        rate_limit_reset: Optional[datetime] = None,
     ):
         self.api_key = self._validate_api_key(api_key)
         self.rate_limit_remaining = rate_limit_remaining
@@ -268,10 +272,10 @@ class APICredentials:
     def to_dict(self) -> Dict[str, Any]:
         """Convert credentials to dictionary (excluding sensitive data)."""
         return {
-            'api_key_present': bool(self.api_key),
-            'rate_limit_remaining': self.rate_limit_remaining,
-            'rate_limit_reset': self.rate_limit_reset.isoformat(),
-            'is_rate_limited': self.is_rate_limited()
+            "api_key_present": bool(self.api_key),
+            "rate_limit_remaining": self.rate_limit_remaining,
+            "rate_limit_reset": self.rate_limit_reset.isoformat(),
+            "is_rate_limited": self.is_rate_limited(),
         }
 
 
@@ -287,11 +291,7 @@ class CertificateBundle:
     """
 
     def __init__(
-        self,
-        certificate: str,
-        private_key: str,
-        ca_bundle: str,
-        full_chain: Optional[str] = None
+        self, certificate: str, private_key: str, ca_bundle: str, full_chain: Optional[str] = None
     ):
         self.certificate = self._validate_pem(certificate, "certificate")
         self.private_key = self._validate_pem(private_key, "private key")
@@ -315,7 +315,7 @@ class CertificateBundle:
         key_path: str,
         ca_path: str,
         full_chain_path: Optional[str] = None,
-        file_mode: int = 0o600
+        file_mode: int = 0o600,
     ) -> Dict[str, str]:
         """Save certificate bundle to filesystem."""
         import os
@@ -328,21 +328,21 @@ class CertificateBundle:
         cert_file.parent.mkdir(parents=True, exist_ok=True)
         cert_file.write_text(self.certificate)
         os.chmod(cert_path, file_mode)
-        files_written['certificate'] = cert_path
+        files_written["certificate"] = cert_path
 
         # Write private key
         key_file = Path(key_path)
         key_file.parent.mkdir(parents=True, exist_ok=True)
         key_file.write_text(self.private_key)
         os.chmod(key_path, 0o600)  # Always 600 for private keys
-        files_written['private_key'] = key_path
+        files_written["private_key"] = key_path
 
         # Write CA bundle
         ca_file = Path(ca_path)
         ca_file.parent.mkdir(parents=True, exist_ok=True)
         ca_file.write_text(self.ca_bundle)
         os.chmod(ca_path, file_mode)
-        files_written['ca_bundle'] = ca_path
+        files_written["ca_bundle"] = ca_path
 
         # Write full chain if requested
         if full_chain_path:
@@ -350,18 +350,18 @@ class CertificateBundle:
             full_chain_file.parent.mkdir(parents=True, exist_ok=True)
             full_chain_file.write_text(self.full_chain)
             os.chmod(full_chain_path, file_mode)
-            files_written['full_chain'] = full_chain_path
+            files_written["full_chain"] = full_chain_path
 
         return files_written
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert certificate bundle to dictionary representation."""
         return {
-            'certificate': self.certificate,
-            'private_key': '[REDACTED]',  # Never expose private key
-            'ca_bundle': self.ca_bundle,
-            'full_chain': self.full_chain,
-            'certificate_length': len(self.certificate),
-            'private_key_length': len(self.private_key),
-            'ca_bundle_length': len(self.ca_bundle)
+            "certificate": self.certificate,
+            "private_key": "[REDACTED]",  # Never expose private key
+            "ca_bundle": self.ca_bundle,
+            "full_chain": self.full_chain,
+            "certificate_length": len(self.certificate),
+            "private_key_length": len(self.private_key),
+            "ca_bundle_length": len(self.ca_bundle),
         }

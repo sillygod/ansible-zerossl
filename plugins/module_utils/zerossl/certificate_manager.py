@@ -19,7 +19,7 @@ from .exceptions import (
     ZeroSSLCertificateError,
     ZeroSSLValidationError,
     ZeroSSLHTTPError,
-    ZeroSSLTimeoutError
+    ZeroSSLTimeoutError,
 )
 from .utils import validate_domains, domains_overlap
 
@@ -38,7 +38,7 @@ class CertificateManager:
         api_key: str,
         api_client: Optional[ZeroSSLAPIClient] = None,
         validation_handler: Optional[ValidationHandler] = None,
-        enable_caching: bool = False
+        enable_caching: bool = False,
     ):
         """
         Initialize Certificate Manager.
@@ -59,11 +59,7 @@ class CertificateManager:
         self._cache_ttl = 300  # 5 minutes
 
     def create_certificate(
-        self,
-        domains: List[str],
-        csr: str,
-        validation_method: str,
-        validity_days: int = 90
+        self, domains: List[str], csr: str, validation_method: str, validity_days: int = 90
     ) -> Dict[str, Any]:
         """
         Create a new certificate.
@@ -86,41 +82,38 @@ class CertificateManager:
 
             # Create certificate via API
             response = self.api_client.create_certificate(
-                domains=validated_domains,
-                csr=csr,
-                validity_days=validity_days
+                domains=validated_domains, csr=csr, validity_days=validity_days
             )
 
             # Extract validation information
             validation_files = []
             dns_records = []
 
-            if 'validation' in response and 'other_methods' in response['validation']:
-                validation_data = response['validation']['other_methods']
+            if "validation" in response and "other_methods" in response["validation"]:
+                validation_data = response["validation"]["other_methods"]
 
-                if validation_method == 'HTTP_CSR_HASH':
-                    validation_files = self.validation_handler.prepare_http_validation(validation_data)
-                elif validation_method == 'DNS_CSR_HASH':
+                if validation_method == "HTTP_CSR_HASH":
+                    validation_files = self.validation_handler.prepare_http_validation(
+                        validation_data
+                    )
+                elif validation_method == "DNS_CSR_HASH":
                     dns_records = self.validation_handler.prepare_dns_validation(validation_data)
 
             return {
-                'certificate_id': response['id'],
-                'status': response['status'],
-                'domains': validated_domains,
-                'validation_method': validation_method,
-                'validation_files': validation_files,
-                'dns_records': dns_records,
-                'created': True,
-                'changed': True
+                "certificate_id": response["id"],
+                "status": response["status"],
+                "domains": validated_domains,
+                "validation_method": validation_method,
+                "validation_files": validation_files,
+                "dns_records": dns_records,
+                "created": True,
+                "changed": True,
             }
 
         except Exception as e:
             if isinstance(e, (ZeroSSLHTTPError, ZeroSSLValidationError)):
                 raise
-            raise ZeroSSLCertificateError(
-                f"Failed to create certificate: {e}",
-                operation="create"
-            )
+            raise ZeroSSLCertificateError(f"Failed to create certificate: {e}", operation="create")
 
     def get_certificate_status(self, certificate_id: str) -> Dict[str, Any]:
         """
@@ -147,13 +140,13 @@ class CertificateManager:
             response = self.api_client.get_certificate(certificate_id)
 
             status_info = {
-                'certificate_id': certificate_id,
-                'status': response['status'],
-                'expires': response.get('expires'),
-                'common_name': response.get('common_name'),
-                'additional_domains': response.get('additional_domains', ''),
-                'created': response.get('created'),
-                'validation_completed': response.get('validation_completed', False)
+                "certificate_id": certificate_id,
+                "status": response["status"],
+                "expires": response.get("expires"),
+                "common_name": response.get("common_name"),
+                "additional_domains": response.get("additional_domains", ""),
+                "created": response.get("created"),
+                "validation_completed": response.get("validation_completed", False),
             }
 
             # Cache the result
@@ -169,7 +162,7 @@ class CertificateManager:
             raise ZeroSSLCertificateError(
                 f"Failed to get certificate status: {e}",
                 certificate_id=certificate_id,
-                operation="status_check"
+                operation="status_check",
             )
 
     def find_certificate_for_domains(self, domains: List[str]) -> Optional[str]:
@@ -189,21 +182,18 @@ class CertificateManager:
             validated_domains = validate_domains(domains)
 
             # List all issued certificates
-            response = self.api_client.list_certificates(status='issued')
+            response = self.api_client.list_certificates(status="issued")
 
-            for cert_data in response.get('results', []):
+            for cert_data in response.get("results", []):
                 if self._domains_match(validated_domains, cert_data):
-                    return cert_data['id']
+                    return cert_data["id"]
 
             return None
 
         except Exception as e:
             if isinstance(e, ZeroSSLHTTPError):
                 raise
-            raise ZeroSSLCertificateError(
-                f"Failed to search certificates: {e}",
-                operation="search"
-            )
+            raise ZeroSSLCertificateError(f"Failed to search certificates: {e}", operation="search")
 
     def _domains_match(self, requested_domains: List[str], certificate: Dict[str, Any]) -> bool:
         """
@@ -216,10 +206,10 @@ class CertificateManager:
         Returns:
             True if certificate covers all requested domains
         """
-        cert_domains = [certificate['common_name']]
+        cert_domains = [certificate["common_name"]]
 
-        if certificate.get('additional_domains'):
-            additional = certificate['additional_domains'].split(',')
+        if certificate.get("additional_domains"):
+            additional = certificate["additional_domains"].split(",")
             cert_domains.extend([d.strip() for d in additional if d.strip()])
 
         # Check if all requested domains are covered
@@ -235,11 +225,7 @@ class CertificateManager:
 
         return True
 
-    def needs_renewal(
-        self,
-        domains: List[str],
-        threshold_days: int = 30
-    ) -> bool:
+    def needs_renewal(self, domains: List[str], threshold_days: int = 30) -> bool:
         """
         Check if domains need certificate renewal.
 
@@ -263,12 +249,12 @@ class CertificateManager:
             status_info = self.get_certificate_status(certificate_id)
 
             # Check if certificate is in usable status
-            if not self._is_usable_status(status_info['status']):
+            if not self._is_usable_status(status_info["status"]):
                 return True
 
             # Check expiration
-            if status_info['expires']:
-                expires_at = datetime.strptime(status_info['expires'], '%Y-%m-%d %H:%M:%S')
+            if status_info["expires"]:
+                expires_at = datetime.strptime(status_info["expires"], "%Y-%m-%d %H:%M:%S")
                 days_until_expiry = (expires_at - datetime.utcnow()).days
 
                 return days_until_expiry <= threshold_days
@@ -280,13 +266,12 @@ class CertificateManager:
             if isinstance(e, ZeroSSLCertificateError):
                 raise
             raise ZeroSSLCertificateError(
-                f"Failed to check renewal status: {e}",
-                operation="renewal_check"
+                f"Failed to check renewal status: {e}", operation="renewal_check"
             )
 
     def _is_usable_status(self, status: str) -> bool:
         """Check if certificate status is usable."""
-        usable_statuses = ['issued', 'pending_validation', 'draft']
+        usable_statuses = ["issued", "pending_validation", "draft"]
         return status in usable_statuses
 
     def _is_valid_status(self, status: str) -> bool:
@@ -299,17 +284,13 @@ class CertificateManager:
 
     def _days_until_expiry(self, certificate: Dict[str, Any]) -> int:
         """Calculate days until certificate expires."""
-        if not certificate.get('expires'):
+        if not certificate.get("expires"):
             return -1
 
-        expires_at = datetime.strptime(certificate['expires'], '%Y-%m-%d %H:%M:%S')
+        expires_at = datetime.strptime(certificate["expires"], "%Y-%m-%d %H:%M:%S")
         return (expires_at - datetime.utcnow()).days
 
-    def validate_certificate(
-        self,
-        certificate_id: str,
-        validation_method: str
-    ) -> Dict[str, Any]:
+    def validate_certificate(self, certificate_id: str, validation_method: str) -> Dict[str, Any]:
         """
         Trigger certificate validation.
 
@@ -327,19 +308,18 @@ class CertificateManager:
             response = self.api_client.validate_certificate(certificate_id, validation_method)
 
             return {
-                'certificate_id': certificate_id,
-                'validation_method': validation_method,
-                'success': response.get('success', False),
-                'validation_completed': response.get('validation_completed', False),
-                'changed': True
+                "certificate_id": certificate_id,
+                "validation_method": validation_method,
+                "success": response.get("success", False),
+                "validation_completed": response.get("validation_completed", False),
+                "changed": True,
             }
 
         except Exception as e:
             if isinstance(e, (ZeroSSLHTTPError, ZeroSSLValidationError)):
                 raise
             raise ZeroSSLValidationError(
-                f"Certificate validation failed: {e}",
-                validation_method=validation_method
+                f"Certificate validation failed: {e}", validation_method=validation_method
             )
 
     def download_certificate(self, certificate_id: str) -> Dict[str, Any]:
@@ -370,7 +350,7 @@ class CertificateManager:
             raise ZeroSSLCertificateError(
                 f"Failed to download certificate: {e}",
                 certificate_id=certificate_id,
-                operation="download"
+                operation="download",
             )
 
     def _process_certificate_zip(self, zip_content: bytes) -> Dict[str, Any]:
@@ -387,60 +367,48 @@ class CertificateManager:
             ZeroSSLCertificateError: If processing fails
         """
         try:
-            bundle_data = {
-                'certificate': '',
-                'private_key': '',
-                'ca_bundle': '',
-                'full_chain': ''
-            }
+            bundle_data = {"certificate": "", "private_key": "", "ca_bundle": "", "full_chain": ""}
 
-            with zipfile.ZipFile(BytesIO(zip_content), 'r') as zip_file:
+            with zipfile.ZipFile(BytesIO(zip_content), "r") as zip_file:
                 for file_info in zip_file.filelist:
-                    file_content = zip_file.read(file_info.filename).decode('utf-8')
+                    file_content = zip_file.read(file_info.filename).decode("utf-8")
 
-                    if file_info.filename == 'certificate.crt':
-                        bundle_data['certificate'] = file_content
-                    elif file_info.filename == 'ca_bundle.crt':
-                        bundle_data['ca_bundle'] = file_content
-                    elif file_info.filename == 'private.key':
-                        bundle_data['private_key'] = file_content
+                    if file_info.filename == "certificate.crt":
+                        bundle_data["certificate"] = file_content
+                    elif file_info.filename == "ca_bundle.crt":
+                        bundle_data["ca_bundle"] = file_content
+                    elif file_info.filename == "private.key":
+                        bundle_data["private_key"] = file_content
 
             # Create full chain
-            if bundle_data['certificate'] and bundle_data['ca_bundle']:
-                bundle_data['full_chain'] = (
-                    bundle_data['certificate'].strip() + '\n' +
-                    bundle_data['ca_bundle'].strip()
+            if bundle_data["certificate"] and bundle_data["ca_bundle"]:
+                bundle_data["full_chain"] = (
+                    bundle_data["certificate"].strip() + "\n" + bundle_data["ca_bundle"].strip()
                 )
 
             # Validate that we have all required components
-            required_components = ['certificate', 'ca_bundle']
-            missing_components = [comp for comp in required_components
-                                 if not bundle_data[comp]]
+            required_components = ["certificate", "ca_bundle"]
+            missing_components = [comp for comp in required_components if not bundle_data[comp]]
 
             if missing_components:
                 raise ZeroSSLCertificateError(
                     f"Missing certificate components: {', '.join(missing_components)}",
-                    operation="process"
+                    operation="process",
                 )
 
             return bundle_data
 
         except zipfile.BadZipFile:
             raise ZeroSSLCertificateError(
-                "Invalid ZIP file received from ZeroSSL",
-                operation="process"
+                "Invalid ZIP file received from ZeroSSL", operation="process"
             )
         except Exception as e:
             raise ZeroSSLCertificateError(
-                f"Failed to process certificate ZIP: {e}",
-                operation="process"
+                f"Failed to process certificate ZIP: {e}", operation="process"
             )
 
     def poll_validation_status(
-        self,
-        certificate_id: str,
-        max_attempts: int = 30,
-        poll_interval: int = 10
+        self, certificate_id: str, max_attempts: int = 30, poll_interval: int = 10
     ) -> Dict[str, Any]:
         """
         Poll certificate validation status until completion.
@@ -462,17 +430,17 @@ class CertificateManager:
                 status_info = self.get_certificate_status(certificate_id)
 
                 # Check for completion
-                if status_info['status'] == 'issued':
+                if status_info["status"] == "issued":
                     return {
-                        'certificate_id': certificate_id,
-                        'final_status': 'issued',
-                        'validation_completed': True,
-                        'attempts': attempt + 1
+                        "certificate_id": certificate_id,
+                        "final_status": "issued",
+                        "validation_completed": True,
+                        "attempts": attempt + 1,
                     }
 
                 # Check for failure
-                failure_statuses = ['canceled', 'expired', 'failed']
-                if status_info['status'] in failure_statuses:
+                failure_statuses = ["canceled", "expired", "failed"]
+                if status_info["status"] in failure_statuses:
                     raise ZeroSSLValidationError(
                         f"Certificate validation failed with status: {status_info['status']}"
                     )
@@ -489,21 +457,18 @@ class CertificateManager:
                     raise ZeroSSLCertificateError(
                         f"Validation polling failed: {e}",
                         certificate_id=certificate_id,
-                        operation="validation_polling"
+                        operation="validation_polling",
                     )
 
         # If we get here, polling timed out
         raise ZeroSSLTimeoutError(
             f"Validation polling timed out after {max_attempts} attempts",
             timeout_duration=max_attempts * poll_interval,
-            operation="validation_polling"
+            operation="validation_polling",
         )
 
     def create_certificate_bundle(
-        self,
-        certificate_content: str,
-        private_key_content: str,
-        ca_bundle_content: str
+        self, certificate_content: str, private_key_content: str, ca_bundle_content: str
     ) -> CertificateBundle:
         """
         Create a certificate bundle object.
@@ -523,10 +488,9 @@ class CertificateManager:
             return CertificateBundle(
                 certificate=certificate_content,
                 private_key=private_key_content,
-                ca_bundle=ca_bundle_content
+                ca_bundle=ca_bundle_content,
             )
         except Exception as e:
             raise ZeroSSLCertificateError(
-                f"Failed to create certificate bundle: {e}",
-                operation="bundle_creation"
+                f"Failed to create certificate bundle: {e}", operation="bundle_creation"
             )

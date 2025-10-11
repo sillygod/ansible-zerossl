@@ -34,15 +34,18 @@ CERTIFICATE_BUNDLE = {
 # ZIP file structure for download testing
 ZIP_FILE_CONTENTS = MOCK_CERTIFICATE_ZIP_FILES
 
+
 def get_certificate_data(data_type):
     """Get certificate data by type."""
     if data_type in CERTIFICATE_DATA:
         return CERTIFICATE_DATA[data_type]
     raise ValueError(f"Unknown certificate data type: {data_type}")
 
+
 def get_certificate_bundle():
     """Get complete certificate bundle."""
     return CERTIFICATE_BUNDLE.copy()
+
 
 def get_zip_contents():
     """Get ZIP file contents for testing certificate downloads."""

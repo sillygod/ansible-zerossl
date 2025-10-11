@@ -19,6 +19,7 @@ from .exceptions import ZeroSSLConcurrencyError, ZeroSSLTimeoutError
 @dataclass
 class OperationLock:
     """Represents a lock for a specific operation."""
+
     resource_id: str
     operation_type: str
     thread_id: int
@@ -35,9 +36,7 @@ class ConcurrencyManager:
     """
 
     def __init__(
-        self,
-        lock_timeout: int = 300,  # 5 minutes
-        cleanup_interval: int = 60  # 1 minute
+        self, lock_timeout: int = 300, cleanup_interval: int = 60  # 5 minutes  # 1 minute
     ):
         """
         Initialize concurrency manager.
@@ -66,10 +65,7 @@ class ConcurrencyManager:
         """Start background thread for lock cleanup."""
         if self._cleanup_thread is None or not self._cleanup_thread.is_alive():
             self._cleanup_stop_event.clear()
-            self._cleanup_thread = threading.Thread(
-                target=self._cleanup_expired_locks,
-                daemon=True
-            )
+            self._cleanup_thread = threading.Thread(target=self._cleanup_expired_locks, daemon=True)
             self._cleanup_thread.start()
 
     def _cleanup_expired_locks(self):
@@ -87,10 +83,7 @@ class ConcurrencyManager:
 
     @contextmanager
     def acquire_certificate_lock(
-        self,
-        certificate_id: str,
-        operation_type: str,
-        timeout: Optional[int] = None
+        self, certificate_id: str, operation_type: str, timeout: Optional[int] = None
     ):
         """
         Acquire exclusive lock for certificate operation.
@@ -124,12 +117,7 @@ class ConcurrencyManager:
                 self._cert_operations.discard(certificate_id)
 
     @contextmanager
-    def acquire_domain_lock(
-        self,
-        domain: str,
-        operation_type: str,
-        timeout: Optional[int] = None
-    ):
+    def acquire_domain_lock(self, domain: str, operation_type: str, timeout: Optional[int] = None):
         """
         Acquire exclusive lock for domain operation.
 
@@ -165,10 +153,7 @@ class ConcurrencyManager:
 
     @contextmanager
     def acquire_multi_domain_lock(
-        self,
-        domains: list,
-        operation_type: str,
-        timeout: Optional[int] = None
+        self, domains: list, operation_type: str, timeout: Optional[int] = None
     ):
         """
         Acquire locks for multiple domains atomically.
@@ -214,13 +199,7 @@ class ConcurrencyManager:
                 for domain in sorted_domains:
                     self._domain_operations.discard(domain)
 
-    def _acquire_lock(
-        self,
-        lock_key: str,
-        resource_id: str,
-        operation_type: str,
-        timeout: int
-    ):
+    def _acquire_lock(self, lock_key: str, resource_id: str, operation_type: str, timeout: int):
         """
         Acquire a specific lock with timeout.
 
@@ -247,7 +226,7 @@ class ConcurrencyManager:
                         operation_type=operation_type,
                         thread_id=thread_id,
                         acquired_at=time.time(),
-                        expires_at=expires_at
+                        expires_at=expires_at,
                     )
                     return
 
@@ -259,8 +238,7 @@ class ConcurrencyManager:
                     return
 
                 # Check if existing lock has expired
-                if (existing_lock.expires_at and
-                    time.time() > existing_lock.expires_at):
+                if existing_lock.expires_at and time.time() > existing_lock.expires_at:
                     # Remove expired lock and try again
                     del self._locks[lock_key]
                     continue
@@ -271,7 +249,7 @@ class ConcurrencyManager:
                     f"Failed to acquire lock for {operation_type} on {resource_id}",
                     resource_id=resource_id,
                     operation_type=operation_type,
-                    timeout_duration=timeout
+                    timeout_duration=timeout,
                 )
 
             # Wait before retrying
@@ -394,12 +372,12 @@ class ConcurrencyManager:
                 )
 
         return {
-            'active_locks': active_locks,
-            'certificate_operations': cert_operations,
-            'domain_operations': domain_operations,
-            'operation_counts': operation_counts,
-            'lock_timeout': self.lock_timeout,
-            'cleanup_interval': self.cleanup_interval
+            "active_locks": active_locks,
+            "certificate_operations": cert_operations,
+            "domain_operations": domain_operations,
+            "operation_counts": operation_counts,
+            "lock_timeout": self.lock_timeout,
+            "cleanup_interval": self.cleanup_interval,
         }
 
     def shutdown(self):
@@ -457,13 +435,7 @@ class FileOperationManager:
         with file_lock:
             yield
 
-    def safe_write_file(
-        self,
-        file_path: str,
-        content: str,
-        mode: int = 0o600,
-        backup: bool = True
-    ):
+    def safe_write_file(self, file_path: str, content: str, mode: int = 0o600, backup: bool = True):
         """
         Thread-safe file writing with optional backup.
 
@@ -490,7 +462,7 @@ class FileOperationManager:
 
                 # Write content atomically
                 temp_path = f"{file_path}.tmp"
-                with open(temp_path, 'w', encoding='utf-8') as f:
+                with open(temp_path, "w", encoding="utf-8") as f:
                     f.write(content)
 
                 # Set permissions and move to final location
@@ -501,7 +473,7 @@ class FileOperationManager:
                 raise ZeroSSLConcurrencyError(
                     f"Failed to write file {file_path}: {e}",
                     resource_id=file_path,
-                    operation_type="file_write"
+                    operation_type="file_write",
                 )
 
     def safe_read_file(self, file_path: str) -> str:
@@ -519,13 +491,13 @@ class FileOperationManager:
         """
         with self.acquire_file_lock(file_path):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     return f.read()
             except Exception as e:
                 raise ZeroSSLConcurrencyError(
                     f"Failed to read file {file_path}: {e}",
                     resource_id=file_path,
-                    operation_type="file_read"
+                    operation_type="file_read",
                 )
 
 
@@ -551,9 +523,13 @@ def get_file_manager() -> FileOperationManager:
 
 
 # Convenience functions
-def acquire_certificate_lock(certificate_id: str, operation_type: str, timeout: Optional[int] = None):
+def acquire_certificate_lock(
+    certificate_id: str, operation_type: str, timeout: Optional[int] = None
+):
     """Acquire lock for certificate operation."""
-    return get_concurrency_manager().acquire_certificate_lock(certificate_id, operation_type, timeout)
+    return get_concurrency_manager().acquire_certificate_lock(
+        certificate_id, operation_type, timeout
+    )
 
 
 def acquire_domain_lock(domain: str, operation_type: str, timeout: Optional[int] = None):

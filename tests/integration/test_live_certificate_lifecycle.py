@@ -35,7 +35,7 @@ class TestLiveCertificateLifecycle:
         live_task_vars,
         temp_cert_directory,
         cleanup_certificates,
-        integration_test_config
+        integration_test_config,
     ):
         """
         Test creating and validating a real certificate using HTTP validation.
@@ -61,13 +61,13 @@ class TestLiveCertificateLifecycle:
 
             # Configure task arguments for certificate request
             request_task_args = {
-                'api_key': zerossl_api_key,
-                'domains': test_domains[:1],  # Use only first domain for simplicity
-                'csr_path': str(csr_path),
-                'state': 'request',
-                'validation_method': 'HTTP_CSR_HASH',
-                'file_mode': '0644',
-                'timeout': integration_test_config['timeout']
+                "api_key": zerossl_api_key,
+                "domains": test_domains[:1],  # Use only first domain for simplicity
+                "csr_path": str(csr_path),
+                "state": "request",
+                "validation_method": "HTTP_CSR_HASH",
+                "file_mode": "0644",
+                "timeout": integration_test_config["timeout"],
             }
 
             live_action_base._task.args = request_task_args
@@ -79,26 +79,26 @@ class TestLiveCertificateLifecycle:
                 play_context=Mock(),
                 loader=Mock(),
                 templar=Mock(),
-                shared_loader_obj=Mock()
+                shared_loader_obj=Mock(),
             )
 
             # Request certificate
             result = action_module.run(task_vars=live_task_vars)
 
             # Should create a certificate in 'draft' status with validation info
-            assert 'certificate_id' in result
-            assert result['changed'] is True
-            certificate_id = result['certificate_id']
+            assert "certificate_id" in result
+            assert result["changed"] is True
+            certificate_id = result["certificate_id"]
             cleanup_certificates.append(certificate_id)
 
             print(f"Created certificate request with ID: {certificate_id}")
             print(f"Certificate status: {result.get('status', 'unknown')}")
 
             # Should have validation files for HTTP validation
-            assert 'validation_files' in result
-            assert len(result['validation_files']) > 0
+            assert "validation_files" in result
+            assert len(result["validation_files"]) > 0
 
-            validation_file = result['validation_files'][0]
+            validation_file = result["validation_files"][0]
             print(f"\n=== Step 2: Manual Validation Required ===")
             print(f"Domain: {validation_file['domain']}")
             print(f"Validation File: {validation_file['filename']}")
@@ -116,11 +116,11 @@ class TestLiveCertificateLifecycle:
 
             # Configure task arguments for validation
             validate_task_args = {
-                'api_key': zerossl_api_key,
-                'certificate_id': certificate_id,
-                'state': 'validate',
-                'validation_method': 'HTTP_CSR_HASH',
-                'timeout': integration_test_config['timeout']
+                "api_key": zerossl_api_key,
+                "certificate_id": certificate_id,
+                "state": "validate",
+                "validation_method": "HTTP_CSR_HASH",
+                "timeout": integration_test_config["timeout"],
             }
 
             live_action_base._task.args = validate_task_args
@@ -130,19 +130,21 @@ class TestLiveCertificateLifecycle:
             # Note: This might take several attempts in real scenarios
             max_validation_attempts = 5
             for attempt in range(max_validation_attempts):
-                if validation_result.get('validation_result', {}).get('success'):
+                if validation_result.get("validation_result", {}).get("success"):
                     break
 
                 print(f"Validation attempt {attempt + 1} failed, retrying in 30 seconds...")
                 time.sleep(30)
                 validation_result = action_module.run(task_vars=live_task_vars)
 
-            assert validation_result.get('validation_result', {}).get('success'), f"Validation failed after {max_validation_attempts} attempts"
+            assert validation_result.get("validation_result", {}).get(
+                "success"
+            ), f"Validation failed after {max_validation_attempts} attempts"
             print("Certificate validation triggered successfully!")
 
             # Step 4: Wait for certificate issuance (polling status)
             print(f"\n=== Step 4: Waiting for certificate issuance ===")
-            max_wait_time = integration_test_config['validation_timeout']
+            max_wait_time = integration_test_config["validation_timeout"]
             wait_interval = 30
             waited = 0
 
@@ -155,40 +157,42 @@ class TestLiveCertificateLifecycle:
 
             while waited < max_wait_time:
                 cert_info = cert_manager.get_certificate_status(certificate_id)
-                status = cert_info['status']
+                status = cert_info["status"]
                 print(f"Certificate status: {status} (waited {waited}s)")
 
-                if status == 'issued':
+                if status == "issued":
                     break
-                elif status in ['cancelled', 'expired', 'failed']:
+                elif status in ["cancelled", "expired", "failed"]:
                     pytest.fail(f"Certificate entered failure state: {status}")
 
                 time.sleep(wait_interval)
                 waited += wait_interval
 
-            assert cert_info['status'] == 'issued', f"Certificate not issued within {max_wait_time} seconds"
+            assert (
+                cert_info["status"] == "issued"
+            ), f"Certificate not issued within {max_wait_time} seconds"
 
             # Step 5: Download certificate (state='download')
             print(f"\n=== Step 5: Downloading certificate ===")
 
             # Configure task arguments for download
             download_task_args = {
-                'api_key': zerossl_api_key,
-                'certificate_id': certificate_id,
-                'certificate_path': str(cert_path),
-                'private_key_path': str(key_path),
-                'state': 'download',
-                'file_mode': '0644',
-                'timeout': integration_test_config['timeout']
+                "api_key": zerossl_api_key,
+                "certificate_id": certificate_id,
+                "certificate_path": str(cert_path),
+                "private_key_path": str(key_path),
+                "state": "download",
+                "file_mode": "0644",
+                "timeout": integration_test_config["timeout"],
             }
 
             live_action_base._task.args = download_task_args
 
             download_result = action_module.run(task_vars=live_task_vars)
 
-            assert download_result['changed'] is True
-            assert 'files_created' in download_result
-            assert str(cert_path) in download_result['files_created']
+            assert download_result["changed"] is True
+            assert "files_created" in download_result
+            assert str(cert_path) in download_result["files_created"]
 
             # Verify certificate file was created
             assert cert_path.exists()
@@ -196,8 +200,8 @@ class TestLiveCertificateLifecycle:
 
             # Verify certificate content
             cert_content = cert_path.read_text()
-            assert '-----BEGIN CERTIFICATE-----' in cert_content
-            assert '-----END CERTIFICATE-----' in cert_content
+            assert "-----BEGIN CERTIFICATE-----" in cert_content
+            assert "-----END CERTIFICATE-----" in cert_content
 
             print(f"Certificate successfully downloaded to: {cert_path}")
             print(f"Certificate ID: {certificate_id}")
@@ -206,17 +210,12 @@ class TestLiveCertificateLifecycle:
         except Exception as e:
             print(f"\n=== Live integration test failed ===")
             print(f"Error: {e}")
-            if 'certificate_id' in locals():
+            if "certificate_id" in locals():
                 print(f"Certificate ID (for manual cleanup): {certificate_id}")
             raise
 
     def test_existing_certificate_check(
-        self,
-        zerossl_api_key,
-        test_domains,
-        live_action_base,
-        live_task_vars,
-        temp_cert_directory
+        self, zerossl_api_key, test_domains, live_action_base, live_task_vars, temp_cert_directory
     ):
         """
         Test checking for existing certificates (idempotent behavior).
@@ -232,11 +231,11 @@ class TestLiveCertificateLifecycle:
         self._generate_test_csr(csr_path, key_path, test_domains[0])
 
         task_args = {
-            'api_key': zerossl_api_key,
-            'domains': test_domains[:1],
-            'csr_path': str(csr_path),
-            'certificate_path': str(cert_path),
-            'state': 'present'
+            "api_key": zerossl_api_key,
+            "domains": test_domains[:1],
+            "csr_path": str(csr_path),
+            "certificate_path": str(cert_path),
+            "state": "present",
         }
 
         live_action_base._task.args = task_args
@@ -247,7 +246,7 @@ class TestLiveCertificateLifecycle:
             play_context=Mock(),
             loader=Mock(),
             templar=Mock(),
-            shared_loader_obj=Mock()
+            shared_loader_obj=Mock(),
         )
 
         # Check for existing certificates
@@ -263,7 +262,7 @@ class TestLiveCertificateLifecycle:
             print(f"Certificate expires: {cert_info.get('expires', 'Unknown')}")
 
             # Test that plugin properly identifies existing certificate
-            assert cert_info['certificate_id'] == existing_cert_id
+            assert cert_info["certificate_id"] == existing_cert_id
         else:
             print("No existing certificate found - this is expected for fresh test domains")
 
@@ -310,7 +309,9 @@ class TestLiveAPIConnectivity:
 
         # Should not raise an exception and should return valid data
         assert isinstance(response, (list, dict))
-        print(f"API authentication successful. Account has {len(response) if isinstance(response, list) else 'unknown'} certificates.")
+        print(
+            f"API authentication successful. Account has {len(response) if isinstance(response, list) else 'unknown'} certificates."
+        )
 
     def test_api_rate_limits(self, zerossl_api_key):
         """Test that API client handles rate limits gracefully."""

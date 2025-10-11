@@ -40,7 +40,9 @@ class CoverageAutomation:
         start_time = time.time()
 
         cmd = [
-            sys.executable, "-m", "pytest",
+            sys.executable,
+            "-m",
+            "pytest",
             "tests/unit/",
             "--cov=plugins.action",
             "--cov=plugins.module_utils",
@@ -49,7 +51,7 @@ class CoverageAutomation:
             "--cov-report=json",
             "--tb=short",  # Shorter tracebacks for faster output
             "--disable-warnings",  # Reduce output overhead
-            "-v"
+            "-v",
         ]
 
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
@@ -68,7 +70,9 @@ class CoverageAutomation:
         start_time = time.time()
 
         cmd = [
-            sys.executable, "-m", "pytest",
+            sys.executable,
+            "-m",
+            "pytest",
             "tests/component/",
             "--cov=plugins.action",
             "--cov=plugins.module_utils",
@@ -78,7 +82,7 @@ class CoverageAutomation:
             "--cov-report=json",
             "--tb=short",  # Shorter tracebacks for faster output
             "--disable-warnings",  # Reduce output overhead
-            "-v"
+            "-v",
         ]
 
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
@@ -98,11 +102,7 @@ class CoverageAutomation:
 
         # Use coverage command directly to generate HTML from existing data
         # This avoids re-running all tests, which is the main bottleneck
-        cmd = [
-            sys.executable, "-m", "coverage",
-            "html",
-            "--directory=htmlcov"
-        ]
+        cmd = [sys.executable, "-m", "coverage", "html", "--directory=htmlcov"]
 
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
         execution_time = time.time() - start_time
@@ -187,7 +187,9 @@ class CoverageAutomation:
 
         return len(failures) == 0, failures
 
-    def validate_performance_requirements(self, unit_time: float, component_time: float, report_time: float) -> Tuple[bool, List[str]]:
+    def validate_performance_requirements(
+        self, unit_time: float, component_time: float, report_time: float
+    ) -> Tuple[bool, List[str]]:
         """Validate performance requirements from contract."""
         failures = []
 
@@ -269,7 +271,7 @@ class CoverageAutomation:
 
         # Success summary
         print("\n✅ Coverage Automation Successful!")
-        print(f"⏱️  Execution times:")
+        print("⏱️  Execution times:")
         print(f"   Unit tests: {unit_time:.1f}s")
         print(f"   Component tests: {component_time:.1f}s")
         print(f"   Report generation: {report_time:.1f}s")

@@ -130,141 +130,127 @@ ABC==
 
 # Test certificate chains for different scenarios
 TEST_CERTIFICATE_CHAINS = {
-    'single_domain': {
-        'certificate': SAMPLE_SINGLE_DOMAIN_CERT,
-        'private_key': SAMPLE_PRIVATE_KEY,
-        'ca_bundle': SAMPLE_CA_BUNDLE,
-        'domains': ['example.com'],
-        'common_name': 'example.com'
+    "single_domain": {
+        "certificate": SAMPLE_SINGLE_DOMAIN_CERT,
+        "private_key": SAMPLE_PRIVATE_KEY,
+        "ca_bundle": SAMPLE_CA_BUNDLE,
+        "domains": ["example.com"],
+        "common_name": "example.com",
     },
-    'multi_domain': {
-        'certificate': SAMPLE_MULTI_DOMAIN_CERT,
-        'private_key': SAMPLE_PRIVATE_KEY,
-        'ca_bundle': SAMPLE_CA_BUNDLE,
-        'domains': ['example.com', 'www.example.com', 'api.example.com'],
-        'common_name': 'example.com'
+    "multi_domain": {
+        "certificate": SAMPLE_MULTI_DOMAIN_CERT,
+        "private_key": SAMPLE_PRIVATE_KEY,
+        "ca_bundle": SAMPLE_CA_BUNDLE,
+        "domains": ["example.com", "www.example.com", "api.example.com"],
+        "common_name": "example.com",
     },
-    'wildcard': {
-        'certificate': SAMPLE_WILDCARD_CERT,
-        'private_key': SAMPLE_PRIVATE_KEY,
-        'ca_bundle': SAMPLE_CA_BUNDLE,
-        'domains': ['*.example.com'],
-        'common_name': '*.example.com'
-    }
+    "wildcard": {
+        "certificate": SAMPLE_WILDCARD_CERT,
+        "private_key": SAMPLE_PRIVATE_KEY,
+        "ca_bundle": SAMPLE_CA_BUNDLE,
+        "domains": ["*.example.com"],
+        "common_name": "*.example.com",
+    },
 }
 
 # Validation file content samples
 SAMPLE_VALIDATION_FILES = {
-    'example.com': {
-        'filename': 'validation-example-com.txt',
-        'content': 'example-com-validation-hash-1234567890abcdef',
-        'url_path': '/.well-known/pki-validation/validation-example-com.txt'
+    "example.com": {
+        "filename": "validation-example-com.txt",
+        "content": "example-com-validation-hash-1234567890abcdef",
+        "url_path": "/.well-known/pki-validation/validation-example-com.txt",
     },
-    'www.example.com': {
-        'filename': 'validation-www-example-com.txt',
-        'content': 'www-example-com-validation-hash-abcdef1234567890',
-        'url_path': '/.well-known/pki-validation/validation-www-example-com.txt'
+    "www.example.com": {
+        "filename": "validation-www-example-com.txt",
+        "content": "www-example-com-validation-hash-abcdef1234567890",
+        "url_path": "/.well-known/pki-validation/validation-www-example-com.txt",
     },
-    'api.example.com': {
-        'filename': 'validation-api-example-com.txt',
-        'content': 'api-example-com-validation-hash-567890abcdef1234',
-        'url_path': '/.well-known/pki-validation/validation-api-example-com.txt'
-    }
+    "api.example.com": {
+        "filename": "validation-api-example-com.txt",
+        "content": "api-example-com-validation-hash-567890abcdef1234",
+        "url_path": "/.well-known/pki-validation/validation-api-example-com.txt",
+    },
 }
 
 # DNS validation records samples
 SAMPLE_DNS_RECORDS = {
-    'example.com': [
+    "example.com": [
         {
-            'name': '_acme-challenge.example.com',
-            'type': 'TXT',
-            'value': 'dns-validation-token-example-com-1234567890abcdef',
-            'ttl': 300
+            "name": "_acme-challenge.example.com",
+            "type": "TXT",
+            "value": "dns-validation-token-example-com-1234567890abcdef",
+            "ttl": 300,
         }
     ],
-    '*.example.com': [
+    "*.example.com": [
         {
-            'name': '_acme-challenge.example.com',
-            'type': 'TXT',
-            'value': 'dns-validation-token-wildcard-example-com-abcdef1234567890',
-            'ttl': 300
+            "name": "_acme-challenge.example.com",
+            "type": "TXT",
+            "value": "dns-validation-token-wildcard-example-com-abcdef1234567890",
+            "ttl": 300,
         }
     ],
-    'multi_domain': [
+    "multi_domain": [
         {
-            'name': '_acme-challenge.example.com',
-            'type': 'TXT',
-            'value': 'dns-validation-token-example-com-1234567890abcdef',
-            'ttl': 300
+            "name": "_acme-challenge.example.com",
+            "type": "TXT",
+            "value": "dns-validation-token-example-com-1234567890abcdef",
+            "ttl": 300,
         },
         {
-            'name': '_acme-challenge.www.example.com',
-            'type': 'TXT',
-            'value': 'dns-validation-token-www-example-com-abcdef1234567890',
-            'ttl': 300
+            "name": "_acme-challenge.www.example.com",
+            "type": "TXT",
+            "value": "dns-validation-token-www-example-com-abcdef1234567890",
+            "ttl": 300,
         },
         {
-            'name': '_acme-challenge.api.example.com',
-            'type': 'TXT',
-            'value': 'dns-validation-token-api-example-com-567890abcdef1234',
-            'ttl': 300
-        }
-    ]
+            "name": "_acme-challenge.api.example.com",
+            "type": "TXT",
+            "value": "dns-validation-token-api-example-com-567890abcdef1234",
+            "ttl": 300,
+        },
+    ],
 }
 
 # Error scenarios for testing
 ERROR_SCENARIOS = {
-    'invalid_domain': {
-        'domains': ['invalid..domain.com'],
-        'expected_error': 'Invalid domain name'
+    "invalid_domain": {"domains": ["invalid..domain.com"], "expected_error": "Invalid domain name"},
+    "missing_csr": {
+        "domains": ["example.com"],
+        "csr": "",
+        "expected_error": "CSR content is required",
     },
-    'missing_csr': {
-        'domains': ['example.com'],
-        'csr': '',
-        'expected_error': 'CSR content is required'
+    "invalid_validation_method": {
+        "domains": ["example.com"],
+        "validation_method": "INVALID_METHOD",
+        "expected_error": "validation_method must be",
     },
-    'invalid_validation_method': {
-        'domains': ['example.com'],
-        'validation_method': 'INVALID_METHOD',
-        'expected_error': 'validation_method must be'
+    "wildcard_with_http": {
+        "domains": ["*.example.com"],
+        "validation_method": "HTTP_CSR_HASH",
+        "expected_error": "Wildcard domains require DNS validation",
     },
-    'wildcard_with_http': {
-        'domains': ['*.example.com'],
-        'validation_method': 'HTTP_CSR_HASH',
-        'expected_error': 'Wildcard domains require DNS validation'
-    }
 }
 
 # Performance test data
 PERFORMANCE_TEST_DATA = {
-    'large_domain_list': [f'subdomain{i}.example.com' for i in range(100)],
-    'concurrent_operations': [
-        {'domains': [f'test{i}.example.com'], 'validation_method': 'HTTP_CSR_HASH'}
+    "large_domain_list": [f"subdomain{i}.example.com" for i in range(100)],
+    "concurrent_operations": [
+        {"domains": [f"test{i}.example.com"], "validation_method": "HTTP_CSR_HASH"}
         for i in range(25)  # Support up to 25 concurrent operations
     ],
-    'rapid_api_calls': [
-        {'action': 'create', 'delay': 0.1},
-        {'action': 'status', 'delay': 0.1},
-        {'action': 'validate', 'delay': 0.1},
-        {'action': 'download', 'delay': 0.1}
-    ] * 20  # 80 rapid API calls
+    "rapid_api_calls": [
+        {"action": "create", "delay": 0.1},
+        {"action": "status", "delay": 0.1},
+        {"action": "validate", "delay": 0.1},
+        {"action": "download", "delay": 0.1},
+    ]
+    * 20,  # 80 rapid API calls
 }
 
 # File permission test cases
 FILE_PERMISSION_TESTS = {
-    'certificate': {
-        'default_mode': 0o644,
-        'secure_mode': 0o600,
-        'public_readable': True
-    },
-    'private_key': {
-        'default_mode': 0o600,
-        'secure_mode': 0o600,
-        'public_readable': False
-    },
-    'ca_bundle': {
-        'default_mode': 0o644,
-        'secure_mode': 0o600,
-        'public_readable': True
-    }
+    "certificate": {"default_mode": 0o644, "secure_mode": 0o600, "public_readable": True},
+    "private_key": {"default_mode": 0o600, "secure_mode": 0o600, "public_readable": False},
+    "ca_bundle": {"default_mode": 0o644, "secure_mode": 0o600, "public_readable": True},
 }

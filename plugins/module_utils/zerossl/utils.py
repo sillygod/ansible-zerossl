@@ -37,7 +37,7 @@ def validate_domain(domain: str) -> bool:
     domain = domain.strip()
 
     # Check for wildcard domains
-    if domain.startswith('*.'):
+    if domain.startswith("*."):
         # Validate the base domain without the wildcard
         base_domain = domain[2:]
         if not base_domain:
@@ -46,10 +46,12 @@ def validate_domain(domain: str) -> bool:
 
     # RFC 1035 domain name validation
     if len(domain) > 253:
-        raise ZeroSSLConfigurationError(f"Domain '{domain}' exceeds maximum length of 253 characters")
+        raise ZeroSSLConfigurationError(
+            f"Domain '{domain}' exceeds maximum length of 253 characters"
+        )
 
     # Split into labels
-    labels = domain.split('.')
+    labels = domain.split(".")
     if len(labels) < 2:
         raise ZeroSSLConfigurationError(f"Domain '{domain}' must have at least two labels")
 
@@ -59,14 +61,18 @@ def validate_domain(domain: str) -> bool:
             raise ZeroSSLConfigurationError(f"Domain '{domain}' contains empty label")
 
         if len(label) > 63:
-            raise ZeroSSLConfigurationError(f"Domain label '{label}' exceeds maximum length of 63 characters")
+            raise ZeroSSLConfigurationError(
+                f"Domain label '{label}' exceeds maximum length of 63 characters"
+            )
 
         # First and last character cannot be hyphen
-        if label.startswith('-') or label.endswith('-'):
-            raise ZeroSSLConfigurationError(f"Domain label '{label}' cannot start or end with hyphen")
+        if label.startswith("-") or label.endswith("-"):
+            raise ZeroSSLConfigurationError(
+                f"Domain label '{label}' cannot start or end with hyphen"
+            )
 
         # Labels can only contain alphanumeric characters and hyphens
-        if not re.match(r'^[a-zA-Z0-9-]+$', label):
+        if not re.match(r"^[a-zA-Z0-9-]+$", label):
             raise ZeroSSLConfigurationError(f"Domain label '{label}' contains invalid characters")
 
     return True
@@ -121,7 +127,7 @@ def is_wildcard_domain(domain: str) -> bool:
     Returns:
         True if domain is a wildcard domain
     """
-    return domain.startswith('*.')
+    return domain.startswith("*.")
 
 
 def extract_base_domain(domain: str) -> str:
@@ -138,9 +144,9 @@ def extract_base_domain(domain: str) -> str:
         return domain[2:]
 
     # Split into parts and take last two (domain.tld)
-    parts = domain.split('.')
+    parts = domain.split(".")
     if len(parts) >= 2:
-        return '.'.join(parts[-2:])
+        return ".".join(parts[-2:])
     return domain
 
 
@@ -162,11 +168,11 @@ def domains_overlap(domain1: str, domain2: str) -> bool:
     # Check if one is a wildcard that covers the other
     if is_wildcard_domain(domain1):
         base1 = extract_base_domain(domain1)
-        return domain2.endswith('.' + base1) or domain2 == base1
+        return domain2.endswith("." + base1) or domain2 == base1
 
     if is_wildcard_domain(domain2):
         base2 = extract_base_domain(domain2)
-        return domain1.endswith('.' + base2) or domain1 == base2
+        return domain1.endswith("." + base2) or domain1 == base2
 
     return False
 
@@ -183,11 +189,11 @@ def check_domain_dns_resolution(domain: str, timeout: int = 10) -> Dict[str, Any
         Dictionary with resolution results
     """
     result = {
-        'domain': domain,
-        'resolves': False,
-        'a_records': [],
-        'aaaa_records': [],
-        'error': None
+        "domain": domain,
+        "resolves": False,
+        "a_records": [],
+        "aaaa_records": [],
+        "error": None,
     }
 
     try:
@@ -198,27 +204,29 @@ def check_domain_dns_resolution(domain: str, timeout: int = 10) -> Dict[str, Any
 
         # Try A record resolution
         try:
-            a_answers = resolver.resolve(domain, 'A')
-            result['a_records'] = [str(rdata) for rdata in a_answers]
-            result['resolves'] = True
+            a_answers = resolver.resolve(domain, "A")
+            result["a_records"] = [str(rdata) for rdata in a_answers]
+            result["resolves"] = True
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
             pass
 
         # Try AAAA record resolution
         try:
-            aaaa_answers = resolver.resolve(domain, 'AAAA')
-            result['aaaa_records'] = [str(rdata) for rdata in aaaa_answers]
-            result['resolves'] = True
+            aaaa_answers = resolver.resolve(domain, "AAAA")
+            result["aaaa_records"] = [str(rdata) for rdata in aaaa_answers]
+            result["resolves"] = True
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
             pass
 
     except Exception as e:
-        result['error'] = str(e)
+        result["error"] = str(e)
 
     return result
 
 
-def check_domain_http_accessibility(domain: str, port: int = 80, timeout: int = 10) -> Dict[str, Any]:
+def check_domain_http_accessibility(
+    domain: str, port: int = 80, timeout: int = 10
+) -> Dict[str, Any]:
     """
     Check if a domain is accessible via HTTP.
 
@@ -230,25 +238,22 @@ def check_domain_http_accessibility(domain: str, port: int = 80, timeout: int = 
     Returns:
         Dictionary with accessibility results
     """
-    result = {
-        'domain': domain,
-        'port': port,
-        'accessible': False,
-        'error': None
-    }
+    result = {"domain": domain, "port": port, "accessible": False, "error": None}
 
     try:
         # Try to connect to the domain
         sock = socket.create_connection((domain, port), timeout)
         sock.close()
-        result['accessible'] = True
+        result["accessible"] = True
     except Exception as e:
-        result['error'] = str(e)
+        result["error"] = str(e)
 
     return result
 
 
-def validate_file_path(file_path: str, must_exist: bool = False, must_be_writable: bool = False) -> str:
+def validate_file_path(
+    file_path: str, must_exist: bool = False, must_be_writable: bool = False
+) -> str:
     """
     Validate a file path.
 
@@ -285,7 +290,7 @@ def validate_file_path(file_path: str, must_exist: bool = False, must_be_writabl
 
         # Test write access
         try:
-            test_file = parent / '.ansible_zerossl_write_test'
+            test_file = parent / ".ansible_zerossl_write_test"
             test_file.touch()
             test_file.unlink()
         except PermissionError:
@@ -319,7 +324,7 @@ def validate_api_key(api_key: str) -> str:
         raise ZeroSSLConfigurationError("API key appears to be too long")
 
     # Check for basic format (alphanumeric and some special chars)
-    if not re.match(r'^[a-zA-Z0-9_-]+$', api_key):
+    if not re.match(r"^[a-zA-Z0-9_-]+$", api_key):
         raise ZeroSSLConfigurationError("API key contains invalid characters")
 
     return api_key
@@ -353,18 +358,18 @@ def parse_validation_url(url: str) -> Dict[str, str]:
         raise ZeroSSLValidationError("Validation URL must include path")
 
     # Extract filename from path
-    path_parts = parsed.path.strip('/').split('/')
-    filename = path_parts[-1] if path_parts else ''
+    path_parts = parsed.path.strip("/").split("/")
+    filename = path_parts[-1] if path_parts else ""
 
     if not filename:
         raise ZeroSSLValidationError("Validation URL must include filename")
 
     return {
-        'scheme': parsed.scheme,
-        'domain': parsed.netloc,
-        'path': parsed.path,
-        'filename': filename,
-        'full_url': url
+        "scheme": parsed.scheme,
+        "domain": parsed.netloc,
+        "path": parsed.path,
+        "filename": filename,
+        "full_url": url,
     }
 
 
@@ -392,19 +397,18 @@ def generate_csr(domains: List[str], private_key_path: Optional[str] = None) -> 
 
     # Generate or load private key
     if private_key_path and Path(private_key_path).exists():
-        with open(private_key_path, 'rb') as f:
+        with open(private_key_path, "rb") as f:
             private_key = serialization.load_pem_private_key(f.read(), password=None)
     else:
         # Generate new private key
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048
-        )
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
     # Build subject name
-    subject = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, domains[0]),
-    ])
+    subject = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, domains[0]),
+        ]
+    )
 
     # Build CSR
     builder = x509.CertificateSigningRequestBuilder()
@@ -436,10 +440,12 @@ def generate_csr(domains: List[str], private_key_path: Optional[str] = None) -> 
 
     # Add extended key usage
     builder = builder.add_extension(
-        x509.ExtendedKeyUsage([
-            ExtendedKeyUsageOID.SERVER_AUTH,
-            ExtendedKeyUsageOID.CLIENT_AUTH,
-        ]),
+        x509.ExtendedKeyUsage(
+            [
+                ExtendedKeyUsageOID.SERVER_AUTH,
+                ExtendedKeyUsageOID.CLIENT_AUTH,
+            ]
+        ),
         critical=True,
     )
 
@@ -447,12 +453,12 @@ def generate_csr(domains: List[str], private_key_path: Optional[str] = None) -> 
     csr = builder.sign(private_key, hashes.SHA256())
 
     # Serialize to PEM format
-    csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+    csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
     private_key_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    ).decode('utf-8')
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
 
     return csr_pem, private_key_pem
 
@@ -471,8 +477,8 @@ def normalize_certificate_content(content: str) -> str:
         return content
 
     # Remove extra whitespace and ensure proper line endings
-    lines = [line.strip() for line in content.split('\n') if line.strip()]
-    return '\n'.join(lines) + '\n'
+    lines = [line.strip() for line in content.split("\n") if line.strip()]
+    return "\n".join(lines) + "\n"
 
 
 def extract_certificate_info(cert_content: str) -> Dict[str, Any]:
@@ -495,19 +501,19 @@ def extract_certificate_info(cert_content: str) -> Dict[str, Any]:
         raise ZeroSSLConfigurationError("cryptography library is required for certificate parsing")
 
     try:
-        cert = x509.load_pem_x509_certificate(cert_content.encode('utf-8'))
+        cert = x509.load_pem_x509_certificate(cert_content.encode("utf-8"))
     except Exception as e:
         raise ZeroSSLValidationError(f"Failed to parse certificate: {e}")
 
     # Extract basic information
     info = {
-        'subject': str(cert.subject),
-        'issuer': str(cert.issuer),
-        'serial_number': str(cert.serial_number),
-        'not_valid_before': cert.not_valid_before.isoformat(),
-        'not_valid_after': cert.not_valid_after.isoformat(),
-        'signature_algorithm': cert.signature_algorithm_oid._name,
-        'domains': []
+        "subject": str(cert.subject),
+        "issuer": str(cert.issuer),
+        "serial_number": str(cert.serial_number),
+        "not_valid_before": cert.not_valid_before.isoformat(),
+        "not_valid_after": cert.not_valid_after.isoformat(),
+        "signature_algorithm": cert.signature_algorithm_oid._name,
+        "domains": [],
     }
 
     # Extract domains from subject and SAN
@@ -518,15 +524,17 @@ def extract_certificate_info(cert_content: str) -> Dict[str, Any]:
             break
 
     if subject_cn:
-        info['domains'].append(subject_cn)
+        info["domains"].append(subject_cn)
 
     # Extract SAN domains
     try:
-        san_extension = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+        san_extension = cert.extensions.get_extension_for_oid(
+            x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        )
         for name in san_extension.value:
             if isinstance(name, x509.DNSName):
-                if name.value not in info['domains']:
-                    info['domains'].append(name.value)
+                if name.value not in info["domains"]:
+                    info["domains"].append(name.value)
     except x509.ExtensionNotFound:
         pass
 
@@ -554,14 +562,12 @@ def create_file_with_permissions(file_path: str, content: str, mode: int = 0o600
         path.chmod(mode)
     except PermissionError as e:
         raise ZeroSSLFileSystemError(
-            f"Permission denied creating file: {file_path}",
+            f"Permission denied creating file: {file_path}, {e}",
             file_path=file_path,
             operation="create",
-            permissions_needed=oct(mode)
+            permissions_needed=oct(mode),
         )
     except OSError as e:
         raise ZeroSSLFileSystemError(
-            f"Failed to create file: {e}",
-            file_path=file_path,
-            operation="create"
+            f"Failed to create file: {e}", file_path=file_path, operation="create"
         )

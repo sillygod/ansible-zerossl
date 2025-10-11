@@ -30,74 +30,68 @@ class MockBoundaryValidator:
         # Define allowed mock boundaries
         self.allowed_mock_targets = {
             # HTTP requests
-            'requests.Session',
-            'requests.get',
-            'requests.post',
-            'requests.put',
-            'requests.delete',
-            'requests.request',
-            'requests.Session.get',
-            'requests.Session.post',
-            'requests.Session.put',
-            'requests.Session.delete',
-            'requests.Session.request',
-
+            "requests.Session",
+            "requests.get",
+            "requests.post",
+            "requests.put",
+            "requests.delete",
+            "requests.request",
+            "requests.Session.get",
+            "requests.Session.post",
+            "requests.Session.put",
+            "requests.Session.delete",
+            "requests.Session.request",
             # File operations
-            'open',
-            'pathlib.Path.open',
-            'pathlib.Path.exists',
-            'pathlib.Path.write_text',
-            'pathlib.Path.read_text',
-            'os.path.exists',
-            'os.makedirs',
-            'shutil.copy2',
-            'shutil.move',
-
+            "open",
+            "pathlib.Path.open",
+            "pathlib.Path.exists",
+            "pathlib.Path.write_text",
+            "pathlib.Path.read_text",
+            "os.path.exists",
+            "os.makedirs",
+            "shutil.copy2",
+            "shutil.move",
             # Time operations (for testing timeouts/delays)
-            'time.sleep',
-            'time.time',
-            'datetime.datetime.now',
-            'datetime.datetime.utcnow',
-
+            "time.sleep",
+            "time.time",
+            "datetime.datetime.now",
+            "datetime.datetime.utcnow",
             # External process execution
-            'subprocess.run',
-            'subprocess.Popen',
-
+            "subprocess.run",
+            "subprocess.Popen",
             # DNS operations (external network dependency)
-            'dns.resolver.Resolver',
-            'dns.resolver.resolve',
-            'dns.query',
-            'socket.gethostbyname',
-            'socket.getaddrinfo',
-
+            "dns.resolver.Resolver",
+            "dns.resolver.resolve",
+            "dns.query",
+            "socket.gethostbyname",
+            "socket.getaddrinfo",
             # Ansible-specific external boundaries
-            'ansible.module_utils.basic.AnsibleModule',
-            'ansible.plugins.action.ActionBase',
-
+            "ansible.module_utils.basic.AnsibleModule",
+            "ansible.plugins.action.ActionBase",
             # Test fixtures and data
-            'tests.fixtures',
-            'conftest'
+            "tests.fixtures",
+            "conftest",
         }
 
         # Internal business logic that should NOT be mocked
         self.forbidden_mock_targets = {
-            'plugins.module_utils.zerossl.certificate_manager.CertificateManager.create_certificate',
-            'plugins.module_utils.zerossl.certificate_manager.CertificateManager.get_certificate_status',
-            'plugins.module_utils.zerossl.certificate_manager.CertificateManager.needs_renewal',
-            'plugins.module_utils.zerossl.certificate_manager.CertificateManager.validate_certificate',
-            'plugins.module_utils.zerossl.certificate_manager.CertificateManager.download_certificate',
-            'plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient.create_certificate',
-            'plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient.get_certificate',
-            'plugins.module_utils.zerossl.validation_handler.ValidationHandler.prepare_http_validation',
-            'plugins.action.zerossl_certificate.ActionModule._handle_present_state',
-            'plugins.action.zerossl_certificate.ActionModule._handle_request_state',
+            "plugins.module_utils.zerossl.certificate_manager.CertificateManager.create_certificate",
+            "plugins.module_utils.zerossl.certificate_manager.CertificateManager.get_certificate_status",
+            "plugins.module_utils.zerossl.certificate_manager.CertificateManager.needs_renewal",
+            "plugins.module_utils.zerossl.certificate_manager.CertificateManager.validate_certificate",
+            "plugins.module_utils.zerossl.certificate_manager.CertificateManager.download_certificate",
+            "plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient.create_certificate",
+            "plugins.module_utils.zerossl.api_client.ZeroSSLAPIClient.get_certificate",
+            "plugins.module_utils.zerossl.validation_handler.ValidationHandler.prepare_http_validation",
+            "plugins.action.zerossl_certificate.ActionModule._handle_present_state",
+            "plugins.action.zerossl_certificate.ActionModule._handle_request_state",
         }
 
     def _find_project_root(self) -> Path:
         """Find the project root directory."""
         current = Path(__file__).parent
         while current.parent != current:
-            if (current / 'pyproject.toml').exists():
+            if (current / "pyproject.toml").exists():
                 return current
             current = current.parent
         return Path.cwd()
@@ -105,19 +99,19 @@ class MockBoundaryValidator:
     def _load_test_modules(self):
         """Load all test modules for analysis."""
         test_files = [
-            'tests.unit.test_certificate_manager',
-            'tests.unit.test_api_client',
-            'tests.unit.test_plugin_contract',
-            'tests.unit.test_validation_handler',
-            'tests.unit.test_zerossl_api_contract',
-            'tests.unit.test_zerossl_validation_contract',
-            'tests.component.test_full_automation',
-            'tests.component.test_error_handling',
-            'tests.component.test_multi_domain',
-            'tests.component.test_renewal_check',
-            'tests.component.test_security',
-            'tests.component.test_split_workflow',
-            'tests.component.test_dns_validation',
+            "tests.unit.test_certificate_manager",
+            "tests.unit.test_api_client",
+            "tests.unit.test_plugin_contract",
+            "tests.unit.test_validation_handler",
+            "tests.unit.test_zerossl_api_contract",
+            "tests.unit.test_zerossl_validation_contract",
+            "tests.component.test_full_automation",
+            "tests.component.test_error_handling",
+            "tests.component.test_multi_domain",
+            "tests.component.test_renewal_check",
+            "tests.component.test_security",
+            "tests.component.test_split_workflow",
+            "tests.component.test_dns_validation",
         ]
 
         for module_name in test_files:
@@ -131,19 +125,22 @@ class MockBoundaryValidator:
         """Load source modules to validate against."""
         try:
             from plugins.action.zerossl_certificate import ActionModule
-            self.source_modules['ActionModule'] = ActionModule
+
+            self.source_modules["ActionModule"] = ActionModule
         except ImportError:
             pass
 
         try:
             from plugins.module_utils.zerossl.certificate_manager import CertificateManager
-            self.source_modules['CertificateManager'] = CertificateManager
+
+            self.source_modules["CertificateManager"] = CertificateManager
         except ImportError:
             pass
 
         try:
             from plugins.module_utils.zerossl.api_client import ZeroSSLAPIClient
-            self.source_modules['ZeroSSLAPIClient'] = ZeroSSLAPIClient
+
+            self.source_modules["ZeroSSLAPIClient"] = ZeroSSLAPIClient
         except ImportError:
             pass
 
@@ -152,7 +149,7 @@ class MockBoundaryValidator:
         mock_calls = []
 
         try:
-            with open(test_file_path, 'r') as f:
+            with open(test_file_path, "r") as f:
                 content = f.read()
 
             # Parse the AST
@@ -164,23 +161,25 @@ class MockBoundaryValidator:
                     for decorator in node.decorator_list:
                         if isinstance(decorator, ast.Call):
                             if isinstance(decorator.func, ast.Attribute):
-                                if decorator.func.attr == 'patch':
+                                if decorator.func.attr == "patch":
                                     # Extract the patch target
                                     if decorator.args:
                                         if isinstance(decorator.args[0], ast.Constant):
                                             target = decorator.args[0].value
-                                            mock_calls.append({
-                                                'type': 'patch_decorator',
-                                                'target': target,
-                                                'function': node.name,
-                                                'line': node.lineno
-                                            })
+                                            mock_calls.append(
+                                                {
+                                                    "type": "patch_decorator",
+                                                    "target": target,
+                                                    "function": node.name,
+                                                    "line": node.lineno,
+                                                }
+                                            )
 
                 # Look for patch context managers and direct calls
                 if isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Attribute):
                         # patch.object calls
-                        if node.func.attr in ['patch', 'patch_object']:
+                        if node.func.attr in ["patch", "patch_object"]:
                             if node.args:
                                 if isinstance(node.args[0], ast.Constant):
                                     target = node.args[0].value
@@ -189,31 +188,33 @@ class MockBoundaryValidator:
                                 else:
                                     target = str(node.args[0])
 
-                                mock_calls.append({
-                                    'type': 'patch_call',
-                                    'target': target,
-                                    'line': node.lineno
-                                })
+                                mock_calls.append(
+                                    {"type": "patch_call", "target": target, "line": node.lineno}
+                                )
 
                         # Mock object creation
-                        elif node.func.attr in ['Mock', 'MagicMock']:
-                            mock_calls.append({
-                                'type': 'mock_creation',
-                                'target': 'Mock object',
-                                'line': node.lineno
-                            })
+                        elif node.func.attr in ["Mock", "MagicMock"]:
+                            mock_calls.append(
+                                {
+                                    "type": "mock_creation",
+                                    "target": "Mock object",
+                                    "line": node.lineno,
+                                }
+                            )
 
                     # mocker.patch calls (pytest-mock)
                     elif isinstance(node.func, ast.Attribute):
-                        if hasattr(node.func, 'value') and isinstance(node.func.value, ast.Name):
-                            if node.func.value.id == 'mocker' and node.func.attr == 'patch':
+                        if hasattr(node.func, "value") and isinstance(node.func.value, ast.Name):
+                            if node.func.value.id == "mocker" and node.func.attr == "patch":
                                 if node.args and isinstance(node.args[0], ast.Constant):
                                     target = node.args[0].value
-                                    mock_calls.append({
-                                        'type': 'mocker_patch',
-                                        'target': target,
-                                        'line': node.lineno
-                                    })
+                                    mock_calls.append(
+                                        {
+                                            "type": "mocker_patch",
+                                            "target": target,
+                                            "line": node.lineno,
+                                        }
+                                    )
 
         except (SyntaxError, IOError) as e:
             pytest.fail(f"Failed to parse test file {test_file_path}: {e}")
@@ -222,50 +223,52 @@ class MockBoundaryValidator:
 
     def analyze_mock_boundaries(self) -> Dict[str, List[Dict[str, Any]]]:
         """Analyze all test files for mock boundary violations."""
-        violations = {
-            'forbidden_mocks': [],
-            'suspicious_mocks': [],
-            'boundary_violations': []
-        }
+        violations = {"forbidden_mocks": [], "suspicious_mocks": [], "boundary_violations": []}
 
         for module_name, test_module in self.test_modules.items():
             # Get the file path
-            if hasattr(test_module, '__file__'):
+            if hasattr(test_module, "__file__"):
                 test_file_path = test_module.__file__
                 mock_calls = self.extract_mock_calls_from_test_file(test_file_path)
 
                 for mock_call in mock_calls:
-                    target = mock_call['target']
+                    target = mock_call["target"]
 
                     # Check for forbidden mocks (internal business logic)
                     if self._is_forbidden_mock(target):
-                        violations['forbidden_mocks'].append({
-                            'module': module_name,
-                            'target': target,
-                            'type': mock_call['type'],
-                            'line': mock_call.get('line'),
-                            'reason': 'Internal business logic should not be mocked'
-                        })
+                        violations["forbidden_mocks"].append(
+                            {
+                                "module": module_name,
+                                "target": target,
+                                "type": mock_call["type"],
+                                "line": mock_call.get("line"),
+                                "reason": "Internal business logic should not be mocked",
+                            }
+                        )
 
                     # Check for boundary violations
                     elif not self._is_allowed_mock_boundary(target):
-                        violations['boundary_violations'].append({
-                            'module': module_name,
-                            'target': target,
-                            'type': mock_call['type'],
-                            'line': mock_call.get('line'),
-                            'reason': 'Mock target not at allowed boundary'
-                        })
+                        violations["boundary_violations"].append(
+                            {
+                                "module": module_name,
+                                "target": target,
+                                "type": mock_call["type"],
+                                "line": mock_call.get("line"),
+                                "reason": "Mock target not at allowed boundary",
+                            }
+                        )
 
                     # Check for suspicious mocks (might indicate over-mocking)
                     elif self._is_suspicious_mock(target):
-                        violations['suspicious_mocks'].append({
-                            'module': module_name,
-                            'target': target,
-                            'type': mock_call['type'],
-                            'line': mock_call.get('line'),
-                            'reason': 'Potentially over-mocking internal logic'
-                        })
+                        violations["suspicious_mocks"].append(
+                            {
+                                "module": module_name,
+                                "target": target,
+                                "type": mock_call["type"],
+                                "line": mock_call.get("line"),
+                                "reason": "Potentially over-mocking internal logic",
+                            }
+                        )
 
         return violations
 
@@ -281,20 +284,20 @@ class MockBoundaryValidator:
 
         # Pattern matches
         allowed_patterns = [
-            r'^requests\.',
-            r'^requests\.Session\.',
-            r'\.open$',
-            r'\.exists$',
-            r'\.read$',
-            r'\.write$',
-            r'^time\.',
-            r'^datetime\.',
-            r'^os\.',
-            r'^pathlib\.',
-            r'^subprocess\.',
-            r'tests\.fixtures',
-            r'conftest\.',
-            r'Mock$',  # Allow Mock objects themselves
+            r"^requests\.",
+            r"^requests\.Session\.",
+            r"\.open$",
+            r"\.exists$",
+            r"\.read$",
+            r"\.write$",
+            r"^time\.",
+            r"^datetime\.",
+            r"^os\.",
+            r"^pathlib\.",
+            r"^subprocess\.",
+            r"tests\.fixtures",
+            r"conftest\.",
+            r"Mock$",  # Allow Mock objects themselves
         ]
 
         for pattern in allowed_patterns:
@@ -306,11 +309,11 @@ class MockBoundaryValidator:
     def _is_suspicious_mock(self, target: str) -> bool:
         """Check if a mock target might indicate over-mocking."""
         suspicious_patterns = [
-            r'plugins\.module_utils\.zerossl\.',  # Internal modules
-            r'\._[^_]',  # Private methods (but not dunder methods)
-            r'\.validate_',  # Validation methods (business logic)
-            r'\.process_',  # Processing methods (business logic)
-            r'\.handle_',  # Handler methods (business logic)
+            r"plugins\.module_utils\.zerossl\.",  # Internal modules
+            r"\._[^_]",  # Private methods (but not dunder methods)
+            r"\.validate_",  # Validation methods (business logic)
+            r"\.process_",  # Processing methods (business logic)
+            r"\.handle_",  # Handler methods (business logic)
         ]
 
         for pattern in suspicious_patterns:
@@ -328,7 +331,7 @@ class MockBoundaryValidator:
 
             # Check module-level test functions
             for name in dir(test_module):
-                if name.startswith('test_'):
+                if name.startswith("test_"):
                     test_func = getattr(test_module, name)
                     if callable(test_func):
                         # Analyze if this test uses real methods
@@ -336,12 +339,12 @@ class MockBoundaryValidator:
                             test_methods.append(name)
 
                 # Check test classes
-                elif name.startswith('Test') and hasattr(test_module, name):
+                elif name.startswith("Test") and hasattr(test_module, name):
                     test_class = getattr(test_module, name)
                     if inspect.isclass(test_class):
                         # Look for test methods in the class
                         for method_name in dir(test_class):
-                            if method_name.startswith('test_'):
+                            if method_name.startswith("test_"):
                                 test_method = getattr(test_class, method_name)
                                 if callable(test_method):
                                     # Analyze if this test uses real methods
@@ -360,25 +363,26 @@ class MockBoundaryValidator:
 
             # Look for signs that this test uses real objects
             real_usage_indicators = [
-                'CertificateManager(',  # Direct instantiation
-                'ZeroSSLAPIClient(',    # Direct instantiation
-                'ActionModule(',        # Direct instantiation
-                '.create_certificate(',  # Method calls on real objects
-                '.get_certificate_status(',
-                '.needs_renewal(',
+                "CertificateManager(",  # Direct instantiation
+                "ZeroSSLAPIClient(",  # Direct instantiation
+                "ActionModule(",  # Direct instantiation
+                ".create_certificate(",  # Method calls on real objects
+                ".get_certificate_status(",
+                ".needs_renewal(",
             ]
 
             # Look for absence of excessive mocking
             excessive_mocking_indicators = [
-                'patch.object(',
-                'mock_',
-                '.side_effect',
-                '.return_value',
+                "patch.object(",
+                "mock_",
+                ".side_effect",
+                ".return_value",
             ]
 
             has_real_usage = any(indicator in source for indicator in real_usage_indicators)
-            has_minimal_mocking = sum(1 for indicator in excessive_mocking_indicators
-                                    if indicator in source) <= 2
+            has_minimal_mocking = (
+                sum(1 for indicator in excessive_mocking_indicators if indicator in source) <= 2
+            )
 
             return has_real_usage and has_minimal_mocking
 
@@ -400,7 +404,7 @@ class TestMockBoundaryValidation:
         validator = MockBoundaryValidator()
         violations = validator.analyze_mock_boundaries()
 
-        forbidden_mocks = violations['forbidden_mocks']
+        forbidden_mocks = violations["forbidden_mocks"]
 
         if forbidden_mocks:
             error_messages = []
@@ -411,9 +415,9 @@ class TestMockBoundaryValidation:
                 )
 
             pytest.fail(
-                f"Found {len(forbidden_mocks)} forbidden internal mock(s):\n" +
-                '\n'.join(error_messages) +
-                "\n\nThese methods should be tested directly, not mocked."
+                f"Found {len(forbidden_mocks)} forbidden internal mock(s):\n"
+                + "\n".join(error_messages)
+                + "\n\nThese methods should be tested directly, not mocked."
             )
 
     def test_mocking_only_at_allowed_boundaries(self):
@@ -426,7 +430,7 @@ class TestMockBoundaryValidation:
         validator = MockBoundaryValidator()
         violations = validator.analyze_mock_boundaries()
 
-        boundary_violations = violations['boundary_violations']
+        boundary_violations = violations["boundary_violations"]
 
         if boundary_violations:
             error_messages = []
@@ -437,9 +441,9 @@ class TestMockBoundaryValidation:
                 )
 
             pytest.fail(
-                f"Found {len(boundary_violations)} mock boundary violation(s):\n" +
-                '\n'.join(error_messages) +
-                "\n\nOnly mock at HTTP, filesystem, or external API boundaries."
+                f"Found {len(boundary_violations)} mock boundary violation(s):\n"
+                + "\n".join(error_messages)
+                + "\n\nOnly mock at HTTP, filesystem, or external API boundaries."
             )
 
     def test_minimal_over_mocking_detected(self):
@@ -452,7 +456,7 @@ class TestMockBoundaryValidation:
         validator = MockBoundaryValidator()
         violations = validator.analyze_mock_boundaries()
 
-        suspicious_mocks = violations['suspicious_mocks']
+        suspicious_mocks = violations["suspicious_mocks"]
 
         if suspicious_mocks:
             # During development, report suspicious mocks as warnings
@@ -463,15 +467,12 @@ class TestMockBoundaryValidation:
                     f"(line {violation.get('line', 'unknown')})"
                 )
 
-            pytest.warns(
-                UserWarning,
-                match="Suspicious mocking patterns detected"
-            )
+            pytest.warns(UserWarning, match="Suspicious mocking patterns detected")
 
             print(
-                f"\nWarning: {len(suspicious_mocks)} suspicious mock pattern(s) detected:\n" +
-                '\n'.join(warning_messages) +
-                "\n\nConsider testing these methods directly instead of mocking."
+                f"\nWarning: {len(suspicious_mocks)} suspicious mock pattern(s) detected:\n"
+                + "\n".join(warning_messages)
+                + "\n\nConsider testing these methods directly instead of mocking."
             )
 
     def test_http_boundary_mocking_is_consistent(self):
@@ -487,22 +488,24 @@ class TestMockBoundaryValidation:
         http_mock_violations = []
 
         for module_name, test_module in validator.test_modules.items():
-            if hasattr(test_module, '__file__'):
+            if hasattr(test_module, "__file__"):
                 mock_calls = validator.extract_mock_calls_from_test_file(test_module.__file__)
 
                 for mock_call in mock_calls:
-                    target = mock_call['target']
+                    target = mock_call["target"]
 
                     # Check for inconsistent HTTP mocking patterns
-                    if 'requests' in target and target not in validator.allowed_mock_targets:
+                    if "requests" in target and target not in validator.allowed_mock_targets:
                         # Check if it's using the approved Session-based mocking
-                        if not any(approved in target for approved in ['Session', 'session']):
-                            http_mock_violations.append({
-                                'module': module_name,
-                                'target': target,
-                                'line': mock_call.get('line'),
-                                'reason': 'Should mock requests.Session instead of direct requests methods'
-                            })
+                        if not any(approved in target for approved in ["Session", "session"]):
+                            http_mock_violations.append(
+                                {
+                                    "module": module_name,
+                                    "target": target,
+                                    "line": mock_call.get("line"),
+                                    "reason": "Should mock requests.Session instead of direct requests methods",
+                                }
+                            )
 
         if http_mock_violations:
             error_messages = []
@@ -513,8 +516,8 @@ class TestMockBoundaryValidation:
                 )
 
             pytest.fail(
-                f"Found {len(http_mock_violations)} HTTP mocking pattern violation(s):\n" +
-                '\n'.join(error_messages)
+                f"Found {len(http_mock_violations)} HTTP mocking pattern violation(s):\n"
+                + "\n".join(error_messages)
             )
 
     def test_tests_exercise_real_code_paths(self):
@@ -535,9 +538,9 @@ class TestMockBoundaryValidation:
 
         # Ensure key modules have real method tests
         required_modules_with_real_tests = [
-            'tests.unit.test_certificate_manager',
-            'tests.unit.test_api_client',
-            'tests.component.test_full_automation'
+            "tests.unit.test_certificate_manager",
+            "tests.unit.test_api_client",
+            "tests.component.test_full_automation",
         ]
 
         missing_real_tests = []
@@ -563,20 +566,24 @@ class TestMockBoundaryValidation:
         fixture_violations = []
 
         for module_name, test_module in validator.test_modules.items():
-            if hasattr(test_module, '__file__'):
+            if hasattr(test_module, "__file__"):
                 mock_calls = validator.extract_mock_calls_from_test_file(test_module.__file__)
 
                 # Count patch decorators vs fixture-based mocking
-                patch_decorators = [call for call in mock_calls if call['type'] == 'patch_decorator']
-                mocker_patches = [call for call in mock_calls if call['type'] == 'mocker_patch']
+                patch_decorators = [
+                    call for call in mock_calls if call["type"] == "patch_decorator"
+                ]
+                mocker_patches = [call for call in mock_calls if call["type"] == "mocker_patch"]
 
                 # If there are many patch decorators but few fixture-based mocks, flag it
                 if len(patch_decorators) > 3 and len(mocker_patches) == 0:
-                    fixture_violations.append({
-                        'module': module_name,
-                        'patch_count': len(patch_decorators),
-                        'reason': 'Consider using fixture-based mocking (pytest-mock) for consistency'
-                    })
+                    fixture_violations.append(
+                        {
+                            "module": module_name,
+                            "patch_count": len(patch_decorators),
+                            "reason": "Consider using fixture-based mocking (pytest-mock) for consistency",
+                        }
+                    )
 
         # This is a recommendation, not a hard failure
         if fixture_violations:
@@ -587,14 +594,11 @@ class TestMockBoundaryValidation:
                     f"{violation['reason']}"
                 )
 
-            pytest.warns(
-                UserWarning,
-                match="Consider fixture-based mocking patterns"
-            )
+            pytest.warns(UserWarning, match="Consider fixture-based mocking patterns")
 
             print(
-                f"\nRecommendation: Consider fixture-based mocking in {len(fixture_violations)} module(s):\n" +
-                '\n'.join(warning_messages)
+                f"\nRecommendation: Consider fixture-based mocking in {len(fixture_violations)} module(s):\n"
+                + "\n".join(warning_messages)
             )
 
     def test_mock_boundary_documentation_exists(self):
@@ -608,35 +612,38 @@ class TestMockBoundaryValidation:
 
         # Check for documentation in common locations
         docs_locations = [
-            validator.project_root / 'README.md',
-            validator.project_root / 'docs' / 'testing.md',
-            validator.project_root / 'tests' / 'README.md',
-            validator.project_root / 'TESTING.md',
+            validator.project_root / "README.md",
+            validator.project_root / "docs" / "testing.md",
+            validator.project_root / "tests" / "README.md",
+            validator.project_root / "TESTING.md",
         ]
 
         mock_documentation_found = False
         for doc_path in docs_locations:
             if doc_path.exists():
                 try:
-                    with open(doc_path, 'r') as f:
+                    with open(doc_path, "r") as f:
                         content = f.read().lower()
 
-                    if any(keyword in content for keyword in [
-                        'mock', 'boundary', 'test', 'http', 'requests'
-                    ]):
+                    if any(
+                        keyword in content
+                        for keyword in ["mock", "boundary", "test", "http", "requests"]
+                    ):
                         mock_documentation_found = True
                         break
                 except IOError:
                     continue
 
         # Also check for inline documentation in conftest.py
-        conftest_path = validator.project_root / 'tests' / 'conftest.py'
+        conftest_path = validator.project_root / "tests" / "conftest.py"
         if conftest_path.exists():
             try:
-                with open(conftest_path, 'r') as f:
+                with open(conftest_path, "r") as f:
                     content = f.read()
 
-                if 'mock' in content.lower() and ('boundary' in content.lower() or 'http' in content.lower()):
+                if "mock" in content.lower() and (
+                    "boundary" in content.lower() or "http" in content.lower()
+                ):
                     mock_documentation_found = True
             except IOError:
                 pass

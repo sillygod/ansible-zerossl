@@ -29,7 +29,7 @@ class CertificateCache:
         cache_dir: str = "/tmp/ansible-zerossl-cache",
         default_ttl: int = 300,  # 5 minutes
         max_cache_size: int = 100,  # Maximum number of cached items
-        enable_persistence: bool = True
+        enable_persistence: bool = True,
     ):
         """
         Initialize certificate cache.
@@ -49,13 +49,7 @@ class CertificateCache:
         self._memory_cache: Dict[str, Dict[str, Any]] = {}
 
         # Cache statistics
-        self._stats = {
-            'hits': 0,
-            'misses': 0,
-            'evictions': 0,
-            'disk_reads': 0,
-            'disk_writes': 0
-        }
+        self._stats = {"hits": 0, "misses": 0, "evictions": 0, "disk_reads": 0, "disk_writes": 0}
 
         # Initialize cache directory
         if self.enable_persistence:
@@ -70,16 +64,15 @@ class CertificateCache:
                 f"Cannot create cache directory: {self.cache_dir}",
                 file_path=str(self.cache_dir),
                 operation="mkdir",
-                permissions_needed="0700"
+                permissions_needed="0700",
             )
 
     def _generate_cache_key(self, operation: str, **kwargs) -> str:
         """Generate cache key for operation with parameters."""
         # Create a deterministic key from operation and parameters
-        key_data = json.dumps({
-            'operation': operation,
-            'params': sorted(kwargs.items())
-        }, sort_keys=True)
+        key_data = json.dumps(
+            {"operation": operation, "params": sorted(kwargs.items())}, sort_keys=True
+        )
 
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
@@ -87,12 +80,7 @@ class CertificateCache:
         """Get file path for persistent cache entry."""
         return self.cache_dir / f"{cache_key}.json"
 
-    def get(
-        self,
-        operation: str,
-        ttl: Optional[int] = None,
-        **kwargs
-    ) -> Optional[Any]:
+    def get(self, operation: str, ttl: Optional[int] = None, **kwargs) -> Optional[Any]:
         """
         Get cached data for operation.
 
@@ -110,10 +98,10 @@ class CertificateCache:
         # Check in-memory cache first
         if cache_key in self._memory_cache:
             entry = self._memory_cache[cache_key]
-            if current_time < entry['expires_at']:
-                self._stats['hits'] += 1
-                entry['last_accessed'] = current_time
-                return entry['data']
+            if current_time < entry["expires_at"]:
+                self._stats["hits"] += 1
+                entry["last_accessed"] = current_time
+                return entry["data"]
             else:
                 # Expired, remove from memory
                 del self._memory_cache[cache_key]
@@ -123,16 +111,16 @@ class CertificateCache:
             cache_file = self._get_cache_file_path(cache_key)
             if cache_file.exists():
                 try:
-                    with open(cache_file, 'r') as f:
+                    with open(cache_file, "r") as f:
                         entry = json.load(f)
 
-                    if current_time < entry['expires_at']:
+                    if current_time < entry["expires_at"]:
                         # Valid persistent cache entry, load into memory
                         self._memory_cache[cache_key] = entry
-                        entry['last_accessed'] = current_time
-                        self._stats['hits'] += 1
-                        self._stats['disk_reads'] += 1
-                        return entry['data']
+                        entry["last_accessed"] = current_time
+                        self._stats["hits"] += 1
+                        self._stats["disk_reads"] += 1
+                        return entry["data"]
                     else:
                         # Expired, remove file
                         cache_file.unlink(missing_ok=True)
@@ -141,16 +129,10 @@ class CertificateCache:
                     # Corrupted cache file, remove it
                     cache_file.unlink(missing_ok=True)
 
-        self._stats['misses'] += 1
+        self._stats["misses"] += 1
         return None
 
-    def set(
-        self,
-        operation: str,
-        data: Any,
-        ttl: Optional[int] = None,
-        **kwargs
-    ) -> None:
+    def set(self, operation: str, data: Any, ttl: Optional[int] = None, **kwargs) -> None:
         """
         Store data in cache.
 
@@ -166,12 +148,12 @@ class CertificateCache:
 
         # Create cache entry
         entry = {
-            'data': data,
-            'created_at': current_time,
-            'expires_at': current_time + effective_ttl,
-            'last_accessed': current_time,
-            'operation': operation,
-            'params': kwargs
+            "data": data,
+            "created_at": current_time,
+            "expires_at": current_time + effective_ttl,
+            "last_accessed": current_time,
+            "operation": operation,
+            "params": kwargs,
         }
 
         # Store in memory cache
@@ -184,10 +166,10 @@ class CertificateCache:
         if self.enable_persistence:
             try:
                 cache_file = self._get_cache_file_path(cache_key)
-                with open(cache_file, 'w') as f:
+                with open(cache_file, "w") as f:
                     json.dump(entry, f)
                 cache_file.chmod(0o600)
-                self._stats['disk_writes'] += 1
+                self._stats["disk_writes"] += 1
             except OSError:
                 # Disk write failed, continue without persistence
                 pass
@@ -198,15 +180,12 @@ class CertificateCache:
             return
 
         # Sort by last_accessed and remove oldest entries
-        sorted_entries = sorted(
-            self._memory_cache.items(),
-            key=lambda x: x[1]['last_accessed']
-        )
+        sorted_entries = sorted(self._memory_cache.items(), key=lambda x: x[1]["last_accessed"])
 
         entries_to_remove = len(self._memory_cache) - self.max_cache_size
         for cache_key, _ in sorted_entries[:entries_to_remove]:
             del self._memory_cache[cache_key]
-            self._stats['evictions'] += 1
+            self._stats["evictions"] += 1
 
             # Also remove from persistent storage
             if self.enable_persistence:
@@ -256,7 +235,7 @@ class CertificateCache:
         # Memory cache
         keys_to_remove = []
         for cache_key, entry in self._memory_cache.items():
-            if operation_pattern in entry.get('operation', ''):
+            if operation_pattern in entry.get("operation", ""):
                 keys_to_remove.append(cache_key)
 
         for cache_key in keys_to_remove:
@@ -267,10 +246,10 @@ class CertificateCache:
         if self.enable_persistence:
             for cache_file in self.cache_dir.glob("*.json"):
                 try:
-                    with open(cache_file, 'r') as f:
+                    with open(cache_file, "r") as f:
                         entry = json.load(f)
 
-                    if operation_pattern in entry.get('operation', ''):
+                    if operation_pattern in entry.get("operation", ""):
                         cache_file.unlink()
                         invalidated_count += 1
 
@@ -317,7 +296,7 @@ class CertificateCache:
         # Clean memory cache
         expired_keys = []
         for cache_key, entry in self._memory_cache.items():
-            if current_time >= entry['expires_at']:
+            if current_time >= entry["expires_at"]:
                 expired_keys.append(cache_key)
 
         for cache_key in expired_keys:
@@ -328,10 +307,10 @@ class CertificateCache:
         if self.enable_persistence:
             for cache_file in self.cache_dir.glob("*.json"):
                 try:
-                    with open(cache_file, 'r') as f:
+                    with open(cache_file, "r") as f:
                         entry = json.load(f)
 
-                    if current_time >= entry['expires_at']:
+                    if current_time >= entry["expires_at"]:
                         cache_file.unlink()
                         removed_count += 1
 
@@ -349,19 +328,19 @@ class CertificateCache:
         Returns:
             Dictionary with cache performance statistics
         """
-        total_requests = self._stats['hits'] + self._stats['misses']
-        hit_rate = (self._stats['hits'] / total_requests * 100) if total_requests > 0 else 0
+        total_requests = self._stats["hits"] + self._stats["misses"]
+        hit_rate = (self._stats["hits"] / total_requests * 100) if total_requests > 0 else 0
 
         return {
-            'hits': self._stats['hits'],
-            'misses': self._stats['misses'],
-            'hit_rate_percent': round(hit_rate, 2),
-            'evictions': self._stats['evictions'],
-            'disk_reads': self._stats['disk_reads'],
-            'disk_writes': self._stats['disk_writes'],
-            'memory_entries': len(self._memory_cache),
-            'cache_size_mb': self._estimate_cache_size(),
-            'cache_directory': str(self.cache_dir)
+            "hits": self._stats["hits"],
+            "misses": self._stats["misses"],
+            "hit_rate_percent": round(hit_rate, 2),
+            "evictions": self._stats["evictions"],
+            "disk_reads": self._stats["disk_reads"],
+            "disk_writes": self._stats["disk_writes"],
+            "memory_entries": len(self._memory_cache),
+            "cache_size_mb": self._estimate_cache_size(),
+            "cache_directory": str(self.cache_dir),
         }
 
     def _estimate_cache_size(self) -> float:
@@ -407,97 +386,109 @@ class CertificateCacheManager:
 
         # Operation-specific TTL values
         self._operation_ttls = {
-            'certificate_status': 120,  # 2 minutes
-            'certificate_list': 300,    # 5 minutes
-            'api_validation': 60,       # 1 minute
-            'domain_validation': 30,    # 30 seconds
-            'certificate_download': 3600  # 1 hour (certificates don't change)
+            "certificate_status": 120,  # 2 minutes
+            "certificate_list": 300,  # 5 minutes
+            "api_validation": 60,  # 1 minute
+            "domain_validation": 30,  # 30 seconds
+            "certificate_download": 3600,  # 1 hour (certificates don't change)
         }
 
     def get_certificate_status(self, certificate_id: str) -> Optional[Dict[str, Any]]:
         """Get cached certificate status."""
         return self.cache.get(
-            'certificate_status',
+            "certificate_status",
             certificate_id=certificate_id,
-            ttl=self._operation_ttls['certificate_status']
+            ttl=self._operation_ttls["certificate_status"],
         )
 
     def set_certificate_status(self, certificate_id: str, status_data: Dict[str, Any]) -> None:
         """Cache certificate status."""
         self.cache.set(
-            'certificate_status',
+            "certificate_status",
             status_data,
             certificate_id=certificate_id,
-            ttl=self._operation_ttls['certificate_status']
+            ttl=self._operation_ttls["certificate_status"],
         )
 
-    def get_certificate_list(self, api_key_hash: str, filters: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
+    def get_certificate_list(
+        self, api_key_hash: str, filters: Dict[str, Any] = None
+    ) -> Optional[Dict[str, Any]]:
         """Get cached certificate list."""
         filters = filters or {}
         return self.cache.get(
-            'certificate_list',
+            "certificate_list",
             api_key_hash=api_key_hash,
             filters=filters,
-            ttl=self._operation_ttls['certificate_list']
+            ttl=self._operation_ttls["certificate_list"],
         )
 
-    def set_certificate_list(self, api_key_hash: str, list_data: Dict[str, Any], filters: Dict[str, Any] = None) -> None:
+    def set_certificate_list(
+        self, api_key_hash: str, list_data: Dict[str, Any], filters: Dict[str, Any] = None
+    ) -> None:
         """Cache certificate list."""
         filters = filters or {}
         self.cache.set(
-            'certificate_list',
+            "certificate_list",
             list_data,
             api_key_hash=api_key_hash,
             filters=filters,
-            ttl=self._operation_ttls['certificate_list']
+            ttl=self._operation_ttls["certificate_list"],
         )
 
-    def get_validation_result(self, certificate_id: str, validation_method: str) -> Optional[Dict[str, Any]]:
+    def get_validation_result(
+        self, certificate_id: str, validation_method: str
+    ) -> Optional[Dict[str, Any]]:
         """Get cached validation result."""
         return self.cache.get(
-            'api_validation',
+            "api_validation",
             certificate_id=certificate_id,
             validation_method=validation_method,
-            ttl=self._operation_ttls['api_validation']
+            ttl=self._operation_ttls["api_validation"],
         )
 
-    def set_validation_result(self, certificate_id: str, validation_method: str, result: Dict[str, Any]) -> None:
+    def set_validation_result(
+        self, certificate_id: str, validation_method: str, result: Dict[str, Any]
+    ) -> None:
         """Cache validation result."""
         self.cache.set(
-            'api_validation',
+            "api_validation",
             result,
             certificate_id=certificate_id,
             validation_method=validation_method,
-            ttl=self._operation_ttls['api_validation']
+            ttl=self._operation_ttls["api_validation"],
         )
 
-    def get_domain_validation_check(self, domain: str, validation_token: str) -> Optional[Dict[str, Any]]:
+    def get_domain_validation_check(
+        self, domain: str, validation_token: str
+    ) -> Optional[Dict[str, Any]]:
         """Get cached domain validation check result."""
         return self.cache.get(
-            'domain_validation',
+            "domain_validation",
             domain=domain,
             validation_token=validation_token,
-            ttl=self._operation_ttls['domain_validation']
+            ttl=self._operation_ttls["domain_validation"],
         )
 
-    def set_domain_validation_check(self, domain: str, validation_token: str, result: Dict[str, Any]) -> None:
+    def set_domain_validation_check(
+        self, domain: str, validation_token: str, result: Dict[str, Any]
+    ) -> None:
         """Cache domain validation check result."""
         self.cache.set(
-            'domain_validation',
+            "domain_validation",
             result,
             domain=domain,
             validation_token=validation_token,
-            ttl=self._operation_ttls['domain_validation']
+            ttl=self._operation_ttls["domain_validation"],
         )
 
     def invalidate_certificate(self, certificate_id: str) -> None:
         """Invalidate all cache entries for a specific certificate."""
-        self.cache.invalidate('certificate_status', certificate_id=certificate_id)
-        self.cache.invalidate_pattern(f'certificate_{certificate_id}')
+        self.cache.invalidate("certificate_status", certificate_id=certificate_id)
+        self.cache.invalidate_pattern(f"certificate_{certificate_id}")
 
     def invalidate_api_key_cache(self, api_key_hash: str) -> None:
         """Invalidate all cache entries for a specific API key."""
-        self.cache.invalidate_pattern(f'api_key_{api_key_hash}')
+        self.cache.invalidate_pattern(f"api_key_{api_key_hash}")
 
     def cleanup_expired_entries(self) -> int:
         """Clean up expired cache entries."""

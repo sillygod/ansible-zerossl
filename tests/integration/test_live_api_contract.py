@@ -32,15 +32,12 @@ class TestLiveZeroSSLAPIContract:
                 self._validate_certificate_structure(cert)
         else:
             # If dict, might be paginated response
-            if 'results' in response:
-                for cert in response['results'][:3]:
+            if "results" in response:
+                for cert in response["results"][:3]:
                     self._validate_certificate_structure(cert)
 
     def test_create_certificate_validation_response(
-        self,
-        zerossl_api_key,
-        test_domains,
-        temp_cert_directory
+        self, zerossl_api_key, test_domains, temp_cert_directory
     ):
         """Test certificate creation returns proper validation data."""
         # Skip this test if we're at API limits
@@ -54,44 +51,41 @@ class TestLiveZeroSSLAPIContract:
         key_path = temp_cert_directory / "contract_test.key"
         self._generate_simple_csr(csr_path, test_domains[0])
 
-        with open(csr_path, 'r') as f:
+        with open(csr_path, "r") as f:
             csr_content = f.read()
 
         try:
             # Create certificate
-            response = client.create_certificate(
-                domains=test_domains[:1],
-                csr=csr_content
-            )
+            response = client.create_certificate(domains=test_domains[:1], csr=csr_content)
 
             # Validate response structure
-            assert 'id' in response
-            assert 'status' in response
-            assert response['status'] == 'draft'
+            assert "id" in response
+            assert "status" in response
+            assert response["status"] == "draft"
 
             # Should have validation data
-            assert 'validation' in response
-            validation = response['validation']
+            assert "validation" in response
+            validation = response["validation"]
 
             # Should have other_methods for HTTP validation
-            assert 'other_methods' in validation
-            other_methods = validation['other_methods']
+            assert "other_methods" in validation
+            other_methods = validation["other_methods"]
 
             # Should have validation data for our domain
             domain = test_domains[0]
             assert domain in other_methods
 
             domain_validation = other_methods[domain]
-            assert 'file_validation_url_http' in domain_validation
-            assert 'file_validation_content' in domain_validation
+            assert "file_validation_url_http" in domain_validation
+            assert "file_validation_content" in domain_validation
 
             # Validation URL should be properly formatted
-            validation_url = domain_validation['file_validation_url_http']
-            assert validation_url.startswith(f'http://{domain}/')
-            assert '.well-known/pki-validation/' in validation_url
+            validation_url = domain_validation["file_validation_url_http"]
+            assert validation_url.startswith(f"http://{domain}/")
+            assert ".well-known/pki-validation/" in validation_url
 
             # Validation content should be non-empty string
-            validation_content = domain_validation['file_validation_content']
+            validation_content = domain_validation["file_validation_content"]
             assert isinstance(validation_content, list)
             assert len(validation_content) > 0
 
@@ -116,11 +110,11 @@ class TestLiveZeroSSLAPIContract:
         if isinstance(certificates, list):
             if not certificates:
                 pytest.skip("No certificates in list")
-            cert_id = certificates[0]['id']
+            cert_id = certificates[0]["id"]
         else:
-            if 'results' not in certificates or not certificates['results']:
+            if "results" not in certificates or not certificates["results"]:
                 pytest.skip("No certificates in results")
-            cert_id = certificates['results'][0]['id']
+            cert_id = certificates["results"][0]["id"]
 
         # Get certificate info
         cert_info = client.get_certificate(cert_id)
@@ -129,8 +123,8 @@ class TestLiveZeroSSLAPIContract:
         self._validate_certificate_structure(cert_info)
 
         # Should have additional fields for detailed info
-        assert 'id' in cert_info
-        assert cert_info['id'] == cert_id
+        assert "id" in cert_info
+        assert cert_info["id"] == cert_id
 
     def test_invalid_api_key_handling(self):
         """Test that invalid API key produces proper error."""
@@ -156,17 +150,17 @@ class TestLiveZeroSSLAPIContract:
 
     def _validate_certificate_structure(self, cert_data):
         """Validate that certificate data has expected structure."""
-        required_fields = ['id', 'status']
+        required_fields = ["id", "status"]
         for field in required_fields:
             assert field in cert_data, f"Missing required field: {field}"
 
         # Status should be one of expected values
-        valid_statuses = ['draft', 'pending_validation', 'issued', 'cancelled', 'expired']
-        assert cert_data['status'] in valid_statuses
+        valid_statuses = ["draft", "pending_validation", "issued", "cancelled", "expired"]
+        assert cert_data["status"] in valid_statuses
 
         # ID should be a non-empty string
-        assert isinstance(cert_data['id'], str)
-        assert len(cert_data['id']) > 0
+        assert isinstance(cert_data["id"], str)
+        assert len(cert_data["id"]) > 0
 
     def _should_skip_create_test(self):
         """Determine if we should skip certificate creation tests."""
@@ -187,12 +181,12 @@ class TestLiveZeroSSLAPIContract:
             csr_content, private_key_content = generate_csr([domain])
 
             # Write CSR to file
-            with open(csr_path, 'w') as f:
+            with open(csr_path, "w") as f:
                 f.write(csr_content)
 
             # Write private key to companion file
-            key_path = csr_path.with_suffix('.key')
-            with open(key_path, 'w') as f:
+            key_path = csr_path.with_suffix(".key")
+            with open(key_path, "w") as f:
                 f.write(private_key_content)
 
         except Exception as e:
@@ -233,16 +227,9 @@ class TestLiveAPIPerformance:
                 start_time = time.time()
                 response = client.list_certificates()
                 elapsed = time.time() - start_time
-                results.append({
-                    'call_id': call_id,
-                    'elapsed': elapsed,
-                    'success': True
-                })
+                results.append({"call_id": call_id, "elapsed": elapsed, "success": True})
             except Exception as e:
-                errors.append({
-                    'call_id': call_id,
-                    'error': str(e)
-                })
+                errors.append({"call_id": call_id, "error": str(e)})
 
         # Make 3 concurrent calls (be conservative to avoid rate limits)
         threads = []

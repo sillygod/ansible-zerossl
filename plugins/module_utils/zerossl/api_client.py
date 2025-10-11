@@ -16,7 +16,7 @@ from .exceptions import (
     ZeroSSLRateLimitError,
     ZeroSSLConfigurationError,
     is_retryable_error,
-    get_retry_delay
+    get_retry_delay,
 )
 from .utils import validate_api_key, validate_domains
 
@@ -35,7 +35,7 @@ class ZeroSSLAPIClient:
         base_url: str = "https://api.zerossl.com",
         max_retries: int = 3,
         timeout: int = 30,
-        rate_limit_remaining: int = 5000
+        rate_limit_remaining: int = 5000,
     ):
         """
         Initialize ZeroSSL API client.
@@ -48,7 +48,7 @@ class ZeroSSLAPIClient:
             rate_limit_remaining: Initial rate limit count
         """
         self.api_key = validate_api_key(api_key)
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.max_retries = max_retries
         self.timeout = timeout
         self.rate_limit_remaining = rate_limit_remaining
@@ -60,9 +60,9 @@ class ZeroSSLAPIClient:
     def _build_headers(self) -> Dict[str, str]:
         """Build default HTTP headers for API requests."""
         return {
-            'User-Agent': 'ansible-zerossl-plugin/1.0',
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded'
+            "User-Agent": "ansible-zerossl-plugin/1.0",
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
         }
 
     def _build_url(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> str:
@@ -82,14 +82,14 @@ class ZeroSSLAPIClient:
         auth_params = self._add_auth(params or {})
 
         if auth_params:
-            url += '?' + urlencode(auth_params)
+            url += "?" + urlencode(auth_params)
 
         return url
 
     def _add_auth(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Add authentication parameters to request."""
         auth_params = params.copy()
-        auth_params['access_key'] = self.api_key
+        auth_params["access_key"] = self.api_key
         return auth_params
 
     def _make_request(
@@ -98,7 +98,7 @@ class ZeroSSLAPIClient:
         endpoint: str,
         data: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
-        json: Optional[Dict[str, Any]] = None
+        json: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make HTTP request to ZeroSSL API with retry logic.
@@ -121,17 +121,15 @@ class ZeroSSLAPIClient:
         url = self._build_url(endpoint, params)
 
         # Prepare request data
-        request_kwargs = {
-            'timeout': self.timeout
-        }
+        request_kwargs = {"timeout": self.timeout}
 
-        if method == 'POST':
+        if method == "POST":
             if json:
-                request_kwargs['json'] = json
+                request_kwargs["json"] = json
             elif data:
-                request_kwargs['data'] = data
+                request_kwargs["data"] = data
             # No need to add auth to request body - it's in the URL
-        elif method == 'GET':
+        elif method == "GET":
             # URL already contains auth parameters
             pass
 
@@ -140,9 +138,9 @@ class ZeroSSLAPIClient:
         for attempt in range(self.max_retries + 1):
             try:
                 # Make the request
-                if method == 'GET':
+                if method == "GET":
                     response = self.session.get(url, **request_kwargs)
-                elif method == 'POST':
+                elif method == "POST":
                     response = self.session.post(url, **request_kwargs)
                 else:
                     raise ZeroSSLHTTPError(f"Unsupported HTTP method: {method}")
@@ -158,7 +156,7 @@ class ZeroSSLAPIClient:
                         raise ZeroSSLHTTPError(
                             f"Invalid JSON response: {e}",
                             status_code=response.status_code,
-                            response_data={'text': response.text}
+                            response_data={"text": response.text},
                         )
 
                 # Handle error responses
@@ -183,9 +181,9 @@ class ZeroSSLAPIClient:
 
     def _update_rate_limit_from_response(self, response: requests.Response):
         """Update rate limit information from response headers."""
-        if 'X-RateLimit-Remaining' in response.headers:
+        if "X-RateLimit-Remaining" in response.headers:
             try:
-                self.rate_limit_remaining = int(response.headers['X-RateLimit-Remaining'])
+                self.rate_limit_remaining = int(response.headers["X-RateLimit-Remaining"])
             except ValueError:
                 pass
 
@@ -204,27 +202,26 @@ class ZeroSSLAPIClient:
         try:
             error_data = response.json()
         except ValueError:
-            error_data = {'error': {'message': response.text}}
+            error_data = {"error": {"message": response.text}}
 
         error_message = "Unknown error"
-        if 'error' in error_data:
-            if isinstance(error_data['error'], dict):
-                error_message = error_data['error'].get('message', 'Unknown error')
+        if "error" in error_data:
+            if isinstance(error_data["error"], dict):
+                error_message = error_data["error"].get("message", "Unknown error")
             else:
-                error_message = str(error_data['error'])
+                error_message = str(error_data["error"])
 
         # Handle rate limiting
         if response.status_code == 429:
             retry_after = None
-            if 'Retry-After' in response.headers:
+            if "Retry-After" in response.headers:
                 try:
-                    retry_after = int(response.headers['Retry-After'])
+                    retry_after = int(response.headers["Retry-After"])
                 except ValueError:
                     pass
 
             raise ZeroSSLRateLimitError(
-                message=f"Rate limit exceeded: {error_message}",
-                retry_after=retry_after
+                message=f"Rate limit exceeded: {error_message}", retry_after=retry_after
             )
 
         # Handle other errors
@@ -232,14 +229,11 @@ class ZeroSSLAPIClient:
             message=f"API request failed: {error_message}",
             status_code=response.status_code,
             response_data=error_data,
-            request_url=url
+            request_url=url,
         )
 
     def create_certificate(
-        self,
-        domains: List[str],
-        csr: str,
-        validity_days: int = 90
+        self, domains: List[str], csr: str, validity_days: int = 90
     ) -> Dict[str, Any]:
         """
         Create a new certificate.
@@ -267,12 +261,12 @@ class ZeroSSLAPIClient:
 
         # Prepare request data
         data = {
-            'certificate_domains': ','.join(validated_domains),
-            'certificate_csr': csr.strip(),
-            'certificate_validity_days': str(validity_days)
+            "certificate_domains": ",".join(validated_domains),
+            "certificate_csr": csr.strip(),
+            "certificate_validity_days": str(validity_days),
         }
 
-        return self._make_request('POST', '/certificates', data=data)
+        return self._make_request("POST", "/certificates", data=data)
 
     def get_certificate(self, certificate_id: str) -> Dict[str, Any]:
         """
@@ -291,13 +285,10 @@ class ZeroSSLAPIClient:
         if not certificate_id:
             raise ZeroSSLConfigurationError("certificate_id is required")
 
-        return self._make_request('GET', f'/certificates/{certificate_id}')
+        return self._make_request("GET", f"/certificates/{certificate_id}")
 
     def list_certificates(
-        self,
-        status: Optional[str] = None,
-        page: int = 1,
-        limit: int = 25
+        self, status: Optional[str] = None, page: int = 1, limit: int = 25
     ) -> Dict[str, Any]:
         """
         List certificates.
@@ -313,21 +304,14 @@ class ZeroSSLAPIClient:
         Raises:
             ZeroSSLHTTPError: If API request fails
         """
-        params = {
-            'page': page,
-            'limit': min(limit, 100)  # API maximum
-        }
+        params = {"page": page, "limit": min(limit, 100)}  # API maximum
 
         if status:
-            params['status'] = status
+            params["status"] = status
 
-        return self._make_request('GET', '/certificates', params=params)
+        return self._make_request("GET", "/certificates", params=params)
 
-    def validate_certificate(
-        self,
-        certificate_id: str,
-        validation_method: str
-    ) -> Dict[str, Any]:
+    def validate_certificate(self, certificate_id: str, validation_method: str) -> Dict[str, Any]:
         """
         Trigger certificate validation.
 
@@ -345,16 +329,14 @@ class ZeroSSLAPIClient:
         if not certificate_id:
             raise ZeroSSLConfigurationError("certificate_id is required")
 
-        if validation_method not in ['HTTP_CSR_HASH', 'DNS_CSR_HASH']:
+        if validation_method not in ["HTTP_CSR_HASH", "DNS_CSR_HASH"]:
             raise ZeroSSLConfigurationError(
                 "validation_method must be 'HTTP_CSR_HASH' or 'DNS_CSR_HASH'"
             )
 
-        data = {
-            'validation_method': validation_method
-        }
+        data = {"validation_method": validation_method}
 
-        return self._make_request('POST', f'/certificates/{certificate_id}/challenges', json=data)
+        return self._make_request("POST", f"/certificates/{certificate_id}/challenges", json=data)
 
     def download_certificate(self, certificate_id: str) -> bytes:
         """
@@ -373,7 +355,7 @@ class ZeroSSLAPIClient:
         if not certificate_id:
             raise ZeroSSLConfigurationError("certificate_id is required")
 
-        url = self._build_url(f'/certificates/{certificate_id}/download')
+        url = self._build_url(f"/certificates/{certificate_id}/download")
 
         try:
             response = self.session.get(url, timeout=self.timeout)
@@ -403,7 +385,7 @@ class ZeroSSLAPIClient:
         if not certificate_id:
             raise ZeroSSLConfigurationError("certificate_id is required")
 
-        return self._make_request('POST', f'/certificates/{certificate_id}/cancel')
+        return self._make_request("POST", f"/certificates/{certificate_id}/cancel")
 
     def get_verification_details(self, certificate_id: str) -> Dict[str, Any]:
         """
@@ -422,11 +404,11 @@ class ZeroSSLAPIClient:
         if not certificate_id:
             raise ZeroSSLConfigurationError("certificate_id is required")
 
-        return self._make_request('GET', f'/certificates/{certificate_id}/verification')
+        return self._make_request("GET", f"/certificates/{certificate_id}/verification")
 
     def close(self):
         """Close the HTTP session."""
-        if hasattr(self, 'session'):
+        if hasattr(self, "session"):
             self.session.close()
 
     def __del__(self):

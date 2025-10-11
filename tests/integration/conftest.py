@@ -50,7 +50,7 @@ def live_action_base():
     action = Mock()
     action._task = Mock()
     action._task.args = {}
-    action._task.action = 'zerossl_certificate'
+    action._task.action = "zerossl_certificate"
     action._task.delegate_to = None
     action._task.async_val = 0
     action._execute_module = Mock()
@@ -62,18 +62,18 @@ def live_action_base():
 def live_task_vars():
     """Real task variables for live testing."""
     return {
-        'ansible_host': 'localhost',
-        'ansible_user': os.getenv('USER', 'testuser'),
-        'inventory_hostname': 'test-host'
+        "ansible_host": "localhost",
+        "ansible_user": os.getenv("USER", "testuser"),
+        "inventory_hostname": "test-host",
     }
 
 
 @pytest.fixture
 def temp_cert_directory():
     """Temporary directory for certificate files during live tests."""
-    csr_path =  os.getenv("ZEROSSL_CERT_CSR_DIR", "")
+    csr_path = os.getenv("ZEROSSL_CERT_CSR_DIR", "")
     if csr_path:
-        cert_dir =  Path(csr_path) / "certificates"
+        cert_dir = Path(csr_path) / "certificates"
         cert_dir.mkdir(exist_ok=True)
         yield cert_dir
     else:
@@ -124,5 +124,5 @@ def integration_test_config():
         "max_retries": 3,
         "retry_delay": 5,  # seconds
         "validation_timeout": 180,  # 3 minutes for domain validation
-        "enable_cleanup": os.getenv("ZEROSSL_CLEANUP_AFTER_TESTS", "true").lower() == "true"
+        "enable_cleanup": os.getenv("ZEROSSL_CLEANUP_AFTER_TESTS", "true").lower() == "true",
     }

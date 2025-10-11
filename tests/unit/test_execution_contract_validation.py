@@ -30,47 +30,51 @@ class MethodSignatureValidator:
         # Import main action module
         try:
             from plugins.action.zerossl_certificate import ActionModule
-            self.source_modules['ActionModule'] = ActionModule
+
+            self.source_modules["ActionModule"] = ActionModule
         except ImportError:
             pass
 
         # Import certificate manager
         try:
             from plugins.module_utils.zerossl.certificate_manager import CertificateManager
-            self.source_modules['CertificateManager'] = CertificateManager
+
+            self.source_modules["CertificateManager"] = CertificateManager
         except ImportError:
             pass
 
         # Import API client
         try:
             from plugins.module_utils.zerossl.api_client import ZeroSSLAPIClient
-            self.source_modules['ZeroSSLAPIClient'] = ZeroSSLAPIClient
+
+            self.source_modules["ZeroSSLAPIClient"] = ZeroSSLAPIClient
         except ImportError:
             pass
 
         # Import validation handler
         try:
             from plugins.module_utils.zerossl.validation_handler import ValidationHandler
-            self.source_modules['ValidationHandler'] = ValidationHandler
+
+            self.source_modules["ValidationHandler"] = ValidationHandler
         except ImportError:
             pass
 
     def _load_test_modules(self):
         """Load test modules for inspection."""
         test_files = [
-            'tests.unit.test_certificate_manager',
-            'tests.unit.test_api_client',
-            'tests.unit.test_plugin_contract',
-            'tests.unit.test_validation_handler',
-            'tests.unit.test_zerossl_api_contract',
-            'tests.unit.test_zerossl_validation_contract',
-            'tests.component.test_full_automation',
-            'tests.component.test_error_handling',
-            'tests.component.test_multi_domain',
-            'tests.component.test_renewal_check',
-            'tests.component.test_security',
-            'tests.component.test_split_workflow',
-            'tests.component.test_dns_validation',
+            "tests.unit.test_certificate_manager",
+            "tests.unit.test_api_client",
+            "tests.unit.test_plugin_contract",
+            "tests.unit.test_validation_handler",
+            "tests.unit.test_zerossl_api_contract",
+            "tests.unit.test_zerossl_validation_contract",
+            "tests.component.test_full_automation",
+            "tests.component.test_error_handling",
+            "tests.component.test_multi_domain",
+            "tests.component.test_renewal_check",
+            "tests.component.test_security",
+            "tests.component.test_split_workflow",
+            "tests.component.test_dns_validation",
         ]
 
         for module_name in test_files:
@@ -84,10 +88,10 @@ class MethodSignatureValidator:
         """Get all public methods from a class."""
         methods = set()
         for name, method in inspect.getmembers(cls, predicate=inspect.ismethod):
-            if not name.startswith('_'):
+            if not name.startswith("_"):
                 methods.add(name)
         for name, method in inspect.getmembers(cls, predicate=inspect.isfunction):
-            if not name.startswith('_'):
+            if not name.startswith("_"):
                 methods.add(name)
         return methods
 
@@ -113,7 +117,7 @@ class MethodSignatureValidator:
 
         for module_name, test_module in self.test_modules.items():
             for name in dir(test_module):
-                if name.startswith('test_'):
+                if name.startswith("test_"):
                     test_func = getattr(test_module, name)
                     if callable(test_func):
                         method_calls = self.extract_method_calls_from_test(test_func)
@@ -121,12 +125,14 @@ class MethodSignatureValidator:
                         # Check each method call against source modules
                         for method_call in method_calls:
                             if not self._is_valid_method_call(method_call):
-                                violations.append({
-                                    'test_module': module_name,
-                                    'test_method': name,
-                                    'invalid_call': method_call,
-                                    'reason': 'Method not found in source code'
-                                })
+                                violations.append(
+                                    {
+                                        "test_module": module_name,
+                                        "test_method": name,
+                                        "invalid_call": method_call,
+                                        "reason": "Method not found in source code",
+                                    }
+                                )
 
         return violations
 
@@ -134,10 +140,23 @@ class MethodSignatureValidator:
         """Check if a method call exists in any source module."""
         # Skip validation for common test methods
         test_methods = {
-            'assert', 'assertEqual', 'assertTrue', 'assertFalse', 'assertRaises',
-            'patch', 'Mock', 'MagicMock', 'side_effect', 'return_value',
-            'call_count', 'called', 'assert_called_with', 'assert_called_once',
-            'reset_mock', 'configure_mock', 'attach_mock'
+            "assert",
+            "assertEqual",
+            "assertTrue",
+            "assertFalse",
+            "assertRaises",
+            "patch",
+            "Mock",
+            "MagicMock",
+            "side_effect",
+            "return_value",
+            "call_count",
+            "called",
+            "assert_called_with",
+            "assert_called_once",
+            "reset_mock",
+            "configure_mock",
+            "attach_mock",
         }
 
         if method_name in test_methods:
@@ -175,8 +194,8 @@ class TestExecutionContractValidation:
                 )
 
             pytest.fail(
-                f"Found {len(violations)} method signature violations:\n" +
-                '\n'.join(error_messages)
+                f"Found {len(violations)} method signature violations:\n"
+                + "\n".join(error_messages)
             )
 
     def test_certificate_manager_methods_have_tests(self):
@@ -185,22 +204,22 @@ class TestExecutionContractValidation:
 
         This ensures comprehensive test coverage of the core business logic.
         """
-        if 'CertificateManager' not in MethodSignatureValidator().source_modules:
+        if "CertificateManager" not in MethodSignatureValidator().source_modules:
             pytest.skip("CertificateManager not available for testing")
 
         validator = MethodSignatureValidator()
-        cert_manager = validator.source_modules['CertificateManager']
+        cert_manager = validator.source_modules["CertificateManager"]
         public_methods = validator.get_class_methods(cert_manager)
 
         # Expected methods that should have tests
         expected_methods = {
-            'create_certificate',
-            'get_certificate_status',
-            'find_certificate_for_domains',
-            'needs_renewal',
-            'validate_certificate',
-            'download_certificate',
-            'poll_validation_status'
+            "create_certificate",
+            "get_certificate_status",
+            "find_certificate_for_domains",
+            "needs_renewal",
+            "validate_certificate",
+            "download_certificate",
+            "poll_validation_status",
         }
 
         # Check that all expected methods exist
@@ -209,25 +228,25 @@ class TestExecutionContractValidation:
             pytest.fail(f"Expected methods not found in CertificateManager: {missing_methods}")
 
         # Verify each method has test coverage
-        test_module_name = 'tests.unit.test_certificate_manager'
+        test_module_name = "tests.unit.test_certificate_manager"
         if test_module_name in validator.test_modules:
             test_module = validator.test_modules[test_module_name]
 
             # Extract test methods from test classes
             test_names = []
             for name, obj in inspect.getmembers(test_module):
-                if inspect.isclass(obj) and name.startswith('Test'):
+                if inspect.isclass(obj) and name.startswith("Test"):
                     # Get all attributes from the class, not just bound methods
                     for method_name in dir(obj):
-                        if method_name.startswith('test_') and callable(getattr(obj, method_name)):
+                        if method_name.startswith("test_") and callable(getattr(obj, method_name)):
                             test_names.append(method_name)
 
             for method in expected_methods:
                 # Check if any test name contains the method name using flexible matching
                 method_patterns = [
-                    method.replace('_', '').lower(),  # pollvalidationstatus
-                    method.lower(),                   # poll_validation_status
-                    method.replace('_', ''),          # pollvalidationstatus (case sensitive)
+                    method.replace("_", "").lower(),  # pollvalidationstatus
+                    method.lower(),  # poll_validation_status
+                    method.replace("_", ""),  # pollvalidationstatus (case sensitive)
                 ]
 
                 has_test = any(
@@ -244,21 +263,21 @@ class TestExecutionContractValidation:
 
         This ensures proper testing of HTTP boundary interactions.
         """
-        if 'ZeroSSLAPIClient' not in MethodSignatureValidator().source_modules:
+        if "ZeroSSLAPIClient" not in MethodSignatureValidator().source_modules:
             pytest.skip("ZeroSSLAPIClient not available for testing")
 
         validator = MethodSignatureValidator()
-        api_client = validator.source_modules['ZeroSSLAPIClient']
+        api_client = validator.source_modules["ZeroSSLAPIClient"]
         public_methods = validator.get_class_methods(api_client)
 
         # Expected methods that should have tests
         expected_methods = {
-            'create_certificate',
-            'get_certificate',
-            'list_certificates',
-            'validate_certificate',
-            'download_certificate',
-            'cancel_certificate'
+            "create_certificate",
+            "get_certificate",
+            "list_certificates",
+            "validate_certificate",
+            "download_certificate",
+            "cancel_certificate",
         }
 
         # Check that all expected methods exist
@@ -267,25 +286,25 @@ class TestExecutionContractValidation:
             pytest.fail(f"Expected methods not found in ZeroSSLAPIClient: {missing_methods}")
 
         # Verify each method has test coverage
-        test_module_name = 'tests.unit.test_api_client'
+        test_module_name = "tests.unit.test_api_client"
         if test_module_name in validator.test_modules:
             test_module = validator.test_modules[test_module_name]
 
             # Extract test methods from test classes
             test_names = []
             for name, obj in inspect.getmembers(test_module):
-                if inspect.isclass(obj) and name.startswith('Test'):
+                if inspect.isclass(obj) and name.startswith("Test"):
                     # Get all attributes from the class, not just bound methods
                     for method_name in dir(obj):
-                        if method_name.startswith('test_') and callable(getattr(obj, method_name)):
+                        if method_name.startswith("test_") and callable(getattr(obj, method_name)):
                             test_names.append(method_name)
 
             for method in expected_methods:
                 # Check if any test name contains the method name using flexible matching
                 method_patterns = [
-                    method.replace('_', '').lower(),  # validatecertificate
-                    method.lower(),                   # validate_certificate
-                    method.replace('_', ''),          # validatecertificate (case sensitive)
+                    method.replace("_", "").lower(),  # validatecertificate
+                    method.lower(),  # validate_certificate
+                    method.replace("_", ""),  # validatecertificate (case sensitive)
                 ]
 
                 has_test = any(
@@ -302,21 +321,21 @@ class TestExecutionContractValidation:
 
         This ensures proper testing of Ansible integration layer.
         """
-        if 'ActionModule' not in MethodSignatureValidator().source_modules:
+        if "ActionModule" not in MethodSignatureValidator().source_modules:
             pytest.skip("ActionModule not available for testing")
 
         validator = MethodSignatureValidator()
-        action_module = validator.source_modules['ActionModule']
+        action_module = validator.source_modules["ActionModule"]
 
         # Expected methods that should have tests
         expected_methods = {
-            'run',  # Main entry point
-            '_handle_present_state',
-            '_handle_request_state',
-            '_handle_validate_state',
-            '_handle_download_state',
-            '_handle_check_renewal_state',
-            '_handle_absent_state'
+            "run",  # Main entry point
+            "_handle_present_state",
+            "_handle_request_state",
+            "_handle_validate_state",
+            "_handle_download_state",
+            "_handle_check_renewal_state",
+            "_handle_absent_state",
         }
 
         # Get actual methods (including private ones for this critical module)
@@ -334,21 +353,21 @@ class TestExecutionContractValidation:
             pytest.fail(f"Expected methods not found in ActionModule: {missing_methods}")
 
         # Verify each method has test coverage
-        test_module_name = 'tests.unit.test_plugin_contract'
+        test_module_name = "tests.unit.test_plugin_contract"
         if test_module_name in validator.test_modules:
             test_module = validator.test_modules[test_module_name]
 
             # Extract test methods from test classes
             test_names = []
             for name, obj in inspect.getmembers(test_module):
-                if inspect.isclass(obj) and name.startswith('Test'):
+                if inspect.isclass(obj) and name.startswith("Test"):
                     # Get all attributes from the class, not just bound methods
                     for method_name in dir(obj):
-                        if method_name.startswith('test_') and callable(getattr(obj, method_name)):
+                        if method_name.startswith("test_") and callable(getattr(obj, method_name)):
                             test_names.append(method_name)
 
             # Main run method should definitely have tests
-            run_tests = [name for name in test_names if 'run' in name.lower()]
+            run_tests = [name for name in test_names if "run" in name.lower()]
             if not run_tests:
                 pytest.fail("No test found for ActionModule.run method")
 
@@ -360,19 +379,18 @@ class TestExecutionContractValidation:
         """
         validator = MethodSignatureValidator()
 
-        component_modules = [name for name in validator.test_modules.keys()
-                           if 'component' in name]
+        component_modules = [name for name in validator.test_modules.keys() if "component" in name]
 
         if not component_modules:
             pytest.fail("No component test modules found - component tests are required")
 
         # Check that component tests exist for key workflows
         expected_workflows = {
-            'full_automation': 'Complete certificate automation workflow',
-            'multi_domain': 'Multi-domain certificate handling',
-            'renewal_check': 'Certificate renewal checking',
-            'error_handling': 'Error handling and recovery',
-            'dns_validation': 'DNS validation workflow'
+            "full_automation": "Complete certificate automation workflow",
+            "multi_domain": "Multi-domain certificate handling",
+            "renewal_check": "Certificate renewal checking",
+            "error_handling": "Error handling and recovery",
+            "dns_validation": "DNS validation workflow",
         }
 
         found_workflows = set()
@@ -384,7 +402,7 @@ class TestExecutionContractValidation:
         missing_workflows = set(expected_workflows.keys()) - found_workflows
         if missing_workflows:
             missing_list = [f"{w}: {expected_workflows[w]}" for w in missing_workflows]
-            pytest.fail(f"Missing component test workflows:\n" + '\n'.join(missing_list))
+            pytest.fail(f"Missing component test workflows:\n" + "\n".join(missing_list))
 
     def test_contract_validation_enforces_tdd_principles(self):
         """
@@ -399,22 +417,22 @@ class TestExecutionContractValidation:
         # Simulate a violation - a method call that shouldn't exist
         fake_violations = [
             {
-                'test_module': 'test_example',
-                'test_method': 'test_nonexistent_method_call',
-                'invalid_call': 'definitely_nonexistent_method_12345',
-                'reason': 'Method not found in source code'
+                "test_module": "test_example",
+                "test_method": "test_nonexistent_method_call",
+                "invalid_call": "definitely_nonexistent_method_12345",
+                "reason": "Method not found in source code",
             }
         ]
 
         # Verify that our validation would catch this
-        is_valid = validator._is_valid_method_call('definitely_nonexistent_method_12345')
+        is_valid = validator._is_valid_method_call("definitely_nonexistent_method_12345")
         if is_valid:
             pytest.fail("Validation logic failed - should not validate nonexistent methods")
 
         # Verify that our validation correctly identifies valid methods
         valid_method_found = False
-        if 'CertificateManager' in validator.source_modules:
-            is_valid = validator._is_valid_method_call('create_certificate')
+        if "CertificateManager" in validator.source_modules:
+            is_valid = validator._is_valid_method_call("create_certificate")
             if is_valid:
                 valid_method_found = True
 

@@ -40,7 +40,7 @@ class TestConfigValidatorImproved:
     @pytest.fixture
     def mock_http_boundary(self, mocker):
         """Mock HTTP boundary for external API calls."""
-        return mocker.patch('requests.Session')
+        return mocker.patch("requests.Session")
 
     @pytest.fixture
     def temp_directory(self):
@@ -67,24 +67,24 @@ class TestConfigValidatorImproved:
         its validation code paths with realistic data.
         """
         params = {
-            'api_key': 'test-api-key-1234567890123456',
-            'domains': ['example.com'],
-            'validation_method': 'DNS_CSR_HASH'
+            "api_key": "test-api-key-1234567890123456",
+            "domains": ["example.com"],
+            "validation_method": "DNS_CSR_HASH",
         }
 
         result = validator.validate_plugin_parameters(params)
 
-        assert result['api_key'] == 'test-api-key-1234567890123456'
-        assert result['domains'] == ['example.com']
-        assert result['state'] == 'present'
-        assert result['validation_method'] == 'DNS_CSR_HASH'
-        assert result['validity_days'] == 90
-        assert result['renew_threshold_days'] == 30
-        assert result['force'] is False
-        assert result['backup'] is False
-        assert result['timeout'] == 30
-        assert result['validation_timeout'] == 300
-        assert result['file_mode'] == 0o600
+        assert result["api_key"] == "test-api-key-1234567890123456"
+        assert result["domains"] == ["example.com"]
+        assert result["state"] == "present"
+        assert result["validation_method"] == "DNS_CSR_HASH"
+        assert result["validity_days"] == 90
+        assert result["renew_threshold_days"] == 30
+        assert result["force"] is False
+        assert result["backup"] is False
+        assert result["timeout"] == 30
+        assert result["validation_timeout"] == 300
+        assert result["file_mode"] == 0o600
 
     def test_validate_plugin_parameters_with_file_paths(self, validator, temp_directory):
         """
@@ -93,21 +93,21 @@ class TestConfigValidatorImproved:
         This test uses real temporary files to exercise actual file path
         validation without mocking filesystem operations.
         """
-        cert_path = os.path.join(temp_directory, 'cert.pem')
-        key_path = os.path.join(temp_directory, 'key.pem')
+        cert_path = os.path.join(temp_directory, "cert.pem")
+        key_path = os.path.join(temp_directory, "key.pem")
 
         params = {
-            'api_key': 'test-api-key-1234567890123456',
-            'domains': ['example.com'],
-            'validation_method': 'DNS_CSR_HASH',
-            'certificate_path': cert_path,
-            'private_key_path': key_path
+            "api_key": "test-api-key-1234567890123456",
+            "domains": ["example.com"],
+            "validation_method": "DNS_CSR_HASH",
+            "certificate_path": cert_path,
+            "private_key_path": key_path,
         }
 
         result = validator.validate_plugin_parameters(params)
 
-        assert result['certificate_path'] == str(Path(cert_path).resolve())
-        assert result['private_key_path'] == str(Path(key_path).resolve())
+        assert result["certificate_path"] == str(Path(cert_path).resolve())
+        assert result["private_key_path"] == str(Path(key_path).resolve())
 
     def test_validate_plugin_parameters_complete_configuration(self, validator, temp_directory):
         """
@@ -117,50 +117,50 @@ class TestConfigValidatorImproved:
         in a single test without any internal mocking.
         """
         web_root = temp_directory
-        csr_file = os.path.join(temp_directory, 'test.csr')
+        csr_file = os.path.join(temp_directory, "test.csr")
 
         # Create a test CSR file
         csr_content = """-----BEGIN CERTIFICATE REQUEST-----
 MIICWjCCAUICAQAwFTETMBEGA1UEAwwKZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
 DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
 -----END CERTIFICATE REQUEST-----"""
-        with open(csr_file, 'w') as f:
+        with open(csr_file, "w") as f:
             f.write(csr_content)
 
         params = {
-            'api_key': 'test-api-key-very-long-1234567890123456',
-            'domains': ['example.com', 'www.example.com'],
-            'state': 'present',
-            'validation_method': 'HTTP_CSR_HASH',
-            'validity_days': 365,
-            'renew_threshold_days': 60,
-            'certificate_path': os.path.join(temp_directory, 'cert.pem'),
-            'private_key_path': os.path.join(temp_directory, 'key.pem'),
-            'ca_bundle_path': os.path.join(temp_directory, 'ca.pem'),
-            'full_chain_path': os.path.join(temp_directory, 'fullchain.pem'),
-            'csr_path': csr_file,
-            'web_root': web_root,
-            'force': True,
-            'backup': True,
-            'timeout': 60,
-            'validation_timeout': 600,
-            'file_mode': '0644'
+            "api_key": "test-api-key-very-long-1234567890123456",
+            "domains": ["example.com", "www.example.com"],
+            "state": "present",
+            "validation_method": "HTTP_CSR_HASH",
+            "validity_days": 365,
+            "renew_threshold_days": 60,
+            "certificate_path": os.path.join(temp_directory, "cert.pem"),
+            "private_key_path": os.path.join(temp_directory, "key.pem"),
+            "ca_bundle_path": os.path.join(temp_directory, "ca.pem"),
+            "full_chain_path": os.path.join(temp_directory, "fullchain.pem"),
+            "csr_path": csr_file,
+            "web_root": web_root,
+            "force": True,
+            "backup": True,
+            "timeout": 60,
+            "validation_timeout": 600,
+            "file_mode": "0644",
         }
 
         result = validator.validate_plugin_parameters(params)
 
         # Verify all parameters are properly validated and processed
-        assert result['api_key'] == 'test-api-key-very-long-1234567890123456'
-        assert result['domains'] == ['example.com', 'www.example.com']
-        assert result['state'] == 'present'
-        assert result['validation_method'] == 'HTTP_CSR_HASH'
-        assert result['validity_days'] == 365
-        assert result['renew_threshold_days'] == 60
-        assert result['force'] is True
-        assert result['backup'] is True
-        assert result['timeout'] == 60
-        assert result['validation_timeout'] == 600
-        assert result['file_mode'] == 0o644
+        assert result["api_key"] == "test-api-key-very-long-1234567890123456"
+        assert result["domains"] == ["example.com", "www.example.com"]
+        assert result["state"] == "present"
+        assert result["validation_method"] == "HTTP_CSR_HASH"
+        assert result["validity_days"] == 365
+        assert result["renew_threshold_days"] == 60
+        assert result["force"] is True
+        assert result["backup"] is True
+        assert result["timeout"] == 60
+        assert result["validation_timeout"] == 600
+        assert result["file_mode"] == 0o644
 
     def test_api_key_validation_real_logic(self, validator):
         """
@@ -170,13 +170,13 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
         utility function without mocking.
         """
         # Valid API key
-        valid_key = 'test-api-key-1234567890123456'
+        valid_key = "test-api-key-1234567890123456"
         result = validator._validate_api_key(valid_key)
         assert result == valid_key
 
         # Test error cases with real validation
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_api_key('')
+            validator._validate_api_key("")
         assert "api_key is required" in str(exc_info.value)
 
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
@@ -191,12 +191,12 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
         utility function without mocking.
         """
         # Valid single domain
-        result = validator._validate_domains('example.com')
-        assert result == ['example.com']
+        result = validator._validate_domains("example.com")
+        assert result == ["example.com"]
 
         # Valid multiple domains
-        result = validator._validate_domains(['example.com', 'www.example.com'])
-        assert result == ['example.com', 'www.example.com']
+        result = validator._validate_domains(["example.com", "www.example.com"])
+        assert result == ["example.com", "www.example.com"]
 
         # Test error cases with real validation
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
@@ -216,11 +216,11 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
         """
         # Test wildcard domain requiring DNS validation
         params = {
-            'domains': ['*.example.com'],
-            'validation_method': 'HTTP_CSR_HASH',
-            'state': 'present',
-            'validity_days': 90,
-            'renew_threshold_days': 30
+            "domains": ["*.example.com"],
+            "validation_method": "HTTP_CSR_HASH",
+            "state": "present",
+            "validity_days": 90,
+            "renew_threshold_days": 30,
         }
 
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
@@ -229,11 +229,11 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
 
         # Test HTTP validation requiring web_root
         params = {
-            'domains': ['example.com'],
-            'validation_method': 'HTTP_CSR_HASH',
-            'state': 'present',
-            'validity_days': 90,
-            'renew_threshold_days': 30
+            "domains": ["example.com"],
+            "validation_method": "HTTP_CSR_HASH",
+            "state": "present",
+            "validity_days": 90,
+            "renew_threshold_days": 30,
         }
 
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
@@ -242,15 +242,17 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
 
         # Test renewal threshold validation
         params = {
-            'domains': ['example.com'],
-            'validation_method': 'DNS_CSR_HASH',
-            'validity_days': 90,
-            'renew_threshold_days': 90
+            "domains": ["example.com"],
+            "validation_method": "DNS_CSR_HASH",
+            "validity_days": 90,
+            "renew_threshold_days": 90,
         }
 
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
             validator._validate_parameter_compatibility(params)
-        assert "renew_threshold_days (90) must be less than validity_days (90)" in str(exc_info.value)
+        assert "renew_threshold_days (90) must be less than validity_days (90)" in str(
+            exc_info.value
+        )
 
     def test_boolean_validation_real_logic(self, validator):
         """
@@ -259,20 +261,20 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
         Exercises the real _validate_boolean method with various input types.
         """
         # Test actual boolean values
-        assert validator._validate_boolean(True, 'test') is True
-        assert validator._validate_boolean(False, 'test') is False
+        assert validator._validate_boolean(True, "test") is True
+        assert validator._validate_boolean(False, "test") is False
 
         # Test string representations
-        assert validator._validate_boolean('true', 'test') is True
-        assert validator._validate_boolean('false', 'test') is False
-        assert validator._validate_boolean('yes', 'test') is True
-        assert validator._validate_boolean('no', 'test') is False
-        assert validator._validate_boolean('1', 'test') is True
-        assert validator._validate_boolean('0', 'test') is False
+        assert validator._validate_boolean("true", "test") is True
+        assert validator._validate_boolean("false", "test") is False
+        assert validator._validate_boolean("yes", "test") is True
+        assert validator._validate_boolean("no", "test") is False
+        assert validator._validate_boolean("1", "test") is True
+        assert validator._validate_boolean("0", "test") is False
 
         # Test error case
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_boolean('invalid', 'test')
+            validator._validate_boolean("invalid", "test")
         assert "test must be a boolean" in str(exc_info.value)
 
     def test_file_mode_validation_real_logic(self, validator):
@@ -282,17 +284,17 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
         Exercises the real _validate_file_mode method with various input formats.
         """
         # Test string octal with prefix
-        assert validator._validate_file_mode('0644') == 0o644
+        assert validator._validate_file_mode("0644") == 0o644
 
         # Test string octal without prefix
-        assert validator._validate_file_mode('644') == 0o644  # Note: both converted to octal
+        assert validator._validate_file_mode("644") == 0o644  # Note: both converted to octal
 
         # Test integer input
         assert validator._validate_file_mode(0o755) == 0o755
 
         # Test error cases
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_file_mode('invalid')
+            validator._validate_file_mode("invalid")
         assert "file_mode must be a valid octal number" in str(exc_info.value)
 
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
@@ -308,11 +310,11 @@ DQEBAQUAA4IBDwAwggEKAoIBAQCqgBwqc9wNkA/jKJNZWm8vJH/Kx/VGlODRrQ2Y
         """
         # Test valid timeout values
         assert validator._validate_timeout(30) == 30
-        assert validator._validate_timeout('60') == 60
+        assert validator._validate_timeout("60") == 60
 
         # Test validation timeout
         assert validator._validate_validation_timeout(300) == 300
-        assert validator._validate_validation_timeout('600') == 600
+        assert validator._validate_validation_timeout("600") == 600
 
         # Test range validation
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
@@ -338,17 +340,17 @@ MIICWjCCAUICAQAwFTETMBEGA1UEAwwKZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
         assert result == valid_csr
 
         # Test whitespace handling
-        csr_with_whitespace = '  ' + valid_csr + '  \n'
+        csr_with_whitespace = "  " + valid_csr + "  \n"
         result = validator._validate_csr_content(csr_with_whitespace)
         assert result == valid_csr
 
         # Test error cases
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_csr_content('')
+            validator._validate_csr_content("")
         assert "csr content cannot be empty" in str(exc_info.value)
 
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_csr_content('invalid csr content')
+            validator._validate_csr_content("invalid csr content")
         assert "csr must be in PEM format" in str(exc_info.value)
 
     def test_file_paths_writable_validation_real_logic(self, validator, temp_directory):
@@ -358,8 +360,8 @@ MIICWjCCAUICAQAwFTETMBEGA1UEAwwKZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
         Exercises the real validate_file_paths_writable method with actual
         file system operations to test writability.
         """
-        writable_path = os.path.join(temp_directory, 'writable.txt')
-        readonly_path = os.path.join('/tmp', 'readonly.txt')  # Use /tmp instead of /root
+        writable_path = os.path.join(temp_directory, "writable.txt")
+        readonly_path = os.path.join("/tmp", "readonly.txt")  # Use /tmp instead of /root
 
         file_paths = [writable_path, readonly_path]
         result = validator.validate_file_paths_writable(file_paths)
@@ -377,22 +379,22 @@ MIICWjCCAUICAQAwFTETMBEGA1UEAwwKZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3
         schema = validator.get_parameter_schema()
 
         # Verify structure
-        assert 'required' in schema
-        assert 'optional' in schema
-        assert isinstance(schema['required'], list)
-        assert isinstance(schema['optional'], dict)
+        assert "required" in schema
+        assert "optional" in schema
+        assert isinstance(schema["required"], list)
+        assert isinstance(schema["optional"], dict)
 
         # Verify required parameters
-        assert 'api_key' in schema['required']
-        assert 'domains' in schema['required']
+        assert "api_key" in schema["required"]
+        assert "domains" in schema["required"]
 
         # Verify optional parameters have proper metadata
-        assert 'state' in schema['optional']
-        state_param = schema['optional']['state']
-        assert state_param['type'] == 'str'
-        assert state_param['default'] == 'present'
-        assert 'choices' in state_param
-        assert state_param['choices'] == validator.valid_states
+        assert "state" in schema["optional"]
+        state_param = schema["optional"]["state"]
+        assert state_param["type"] == "str"
+        assert state_param["default"] == "present"
+        assert "choices" in state_param
+        assert state_param["choices"] == validator.valid_states
 
 
 @pytest.mark.unit
@@ -418,7 +420,7 @@ class TestConfigValidatorErrorHandling:
 
         # Test invalid state value
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_state('invalid_state')
+            validator._validate_state("invalid_state")
         assert "Invalid state: invalid_state" in str(exc_info.value)
         assert exc_info.value.parameter == "state"
 
@@ -431,7 +433,7 @@ class TestConfigValidatorErrorHandling:
 
         # Test invalid method value
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_validation_method('INVALID_METHOD')
+            validator._validate_validation_method("INVALID_METHOD")
         assert "Invalid validation_method: INVALID_METHOD" in str(exc_info.value)
 
     def test_validity_days_real_error_handling(self, validator):
@@ -448,5 +450,5 @@ class TestConfigValidatorErrorHandling:
 
         # Test invalid string
         with pytest.raises(ZeroSSLConfigurationError) as exc_info:
-            validator._validate_validity_days('invalid')
+            validator._validate_validity_days("invalid")
         assert "validity_days must be an integer" in str(exc_info.value)

@@ -18,7 +18,7 @@ try:
         FileOperationManager,
         acquire_certificate_lock,
         acquire_domain_lock,
-        acquire_multi_domain_lock
+        acquire_multi_domain_lock,
     )
     from ansible.module_utils.zerossl.cache import CertificateCacheManager
     from ansible.module_utils.zerossl.api_client import ZeroSSLAPIClient
@@ -26,13 +26,14 @@ try:
 except ImportError:
     import sys
     import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
     from plugins.module_utils.zerossl.concurrency import (
         ConcurrencyManager,
         FileOperationManager,
         acquire_certificate_lock,
         acquire_domain_lock,
-        acquire_multi_domain_lock
+        acquire_multi_domain_lock,
     )
     from plugins.module_utils.zerossl.cache import CertificateCacheManager
     from plugins.module_utils.zerossl.api_client import ZeroSSLAPIClient
@@ -42,7 +43,7 @@ from tests.fixtures import (
     MockZeroSSLAPIClient,
     MockCertificateManager,
     PERFORMANCE_TEST_DATA,
-    create_test_file_structure
+    create_test_file_structure,
 )
 
 
@@ -56,7 +57,7 @@ class TestConcurrentOperations:
 
     def teardown_method(self):
         """Cleanup after each test method."""
-        if hasattr(self, 'concurrency_manager'):
+        if hasattr(self, "concurrency_manager"):
             self.concurrency_manager.shutdown()
 
     def test_concurrent_certificate_locks(self):
@@ -78,25 +79,22 @@ class TestConcurrentOperations:
 
         # Run concurrent lock attempts
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [
-                executor.submit(try_acquire_lock, i)
-                for i in range(num_threads)
-            ]
+            futures = [executor.submit(try_acquire_lock, i) for i in range(num_threads)]
 
             completed = sum(1 for future in as_completed(futures) if future.result())
 
         # Only one thread should succeed at a time, but all should eventually succeed
         assert len(results) == num_threads
-        successful_results = [r for r in results if 'success' in r]
+        successful_results = [r for r in results if "success" in r]
         assert len(successful_results) == num_threads
 
     def test_concurrent_domain_locks(self):
         """Test concurrent domain locking with overlapping domains."""
         domains_sets = [
-            ['example1.com', 'example2.com'],
-            ['example2.com', 'example3.com'],
-            ['example1.com', 'example3.com'],
-            ['example4.com', 'example5.com']
+            ["example1.com", "example2.com"],
+            ["example2.com", "example3.com"],
+            ["example1.com", "example3.com"],
+            ["example4.com", "example5.com"],
         ]
         operation_type = "validation"
         results = []
@@ -105,19 +103,19 @@ class TestConcurrentOperations:
             try:
                 with acquire_multi_domain_lock(domains, operation_type, timeout=2):
                     time.sleep(0.1)  # Simulate work
-                    results.append({
-                        'thread_id': thread_id,
-                        'domains': domains,
-                        'status': 'success'
-                    })
+                    results.append(
+                        {"thread_id": thread_id, "domains": domains, "status": "success"}
+                    )
                     return True
             except Exception as e:
-                results.append({
-                    'thread_id': thread_id,
-                    'domains': domains,
-                    'status': 'failed',
-                    'error': type(e).__name__
-                })
+                results.append(
+                    {
+                        "thread_id": thread_id,
+                        "domains": domains,
+                        "status": "failed",
+                        "error": type(e).__name__,
+                    }
+                )
                 return False
 
         # Run concurrent domain lock attempts
@@ -131,7 +129,7 @@ class TestConcurrentOperations:
 
         # All should eventually succeed (non-overlapping domains run in parallel)
         assert len(results) == len(domains_sets)
-        successful_results = [r for r in results if r['status'] == 'success']
+        successful_results = [r for r in results if r["status"] == "success"]
         assert len(successful_results) == len(domains_sets)
 
     def test_file_operation_concurrency(self, tmp_path):
@@ -143,9 +141,7 @@ class TestConcurrentOperations:
         def write_to_file(thread_id, content):
             try:
                 self.file_manager.safe_write_file(
-                    str(test_file),
-                    f"Content from thread {thread_id}: {content}",
-                    backup=True
+                    str(test_file), f"Content from thread {thread_id}: {content}", backup=True
                 )
                 results.append(f"thread_{thread_id}_write_success")
                 return True
@@ -155,16 +151,13 @@ class TestConcurrentOperations:
 
         # Run concurrent write operations
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [
-                executor.submit(write_to_file, i, f"data_{i}")
-                for i in range(num_threads)
-            ]
+            futures = [executor.submit(write_to_file, i, f"data_{i}") for i in range(num_threads)]
 
             completed = sum(1 for future in as_completed(futures) if future.result())
 
         # All writes should succeed (they're serialized by the file manager)
         assert len(results) == num_threads
-        successful_results = [r for r in results if 'success' in r]
+        successful_results = [r for r in results if "success" in r]
         assert len(successful_results) == num_threads
 
         # File should exist and contain content from the last write
@@ -178,44 +171,37 @@ class TestConcurrentOperations:
         mock_api_client = MockZeroSSLAPIClient("test-api-key")
         cert_manager = MockCertificateManager(api_client=mock_api_client)
 
-        operations = PERFORMANCE_TEST_DATA['concurrent_operations'][:num_operations]
+        operations = PERFORMANCE_TEST_DATA["concurrent_operations"][:num_operations]
         results = []
 
         def perform_certificate_operation(op_id, operation):
             try:
-                domains = operation['domains']
-                validation_method = operation['validation_method']
+                domains = operation["domains"]
+                validation_method = operation["validation_method"]
 
                 # Create certificate
                 create_result = cert_manager.create_certificate(
-                    domains=domains,
-                    csr="mock-csr-content",
-                    validation_method=validation_method
+                    domains=domains, csr="mock-csr-content", validation_method=validation_method
                 )
 
                 # Validate certificate
                 validate_result = cert_manager.validate_certificate(
-                    create_result['certificate_id'],
-                    validation_method
+                    create_result["certificate_id"], validation_method
                 )
 
                 # Download certificate
-                download_result = cert_manager.download_certificate(
-                    create_result['certificate_id']
-                )
+                download_result = cert_manager.download_certificate(create_result["certificate_id"])
 
-                results.append({
-                    'operation_id': op_id,
-                    'status': 'success',
-                    'certificate_id': create_result['certificate_id']
-                })
+                results.append(
+                    {
+                        "operation_id": op_id,
+                        "status": "success",
+                        "certificate_id": create_result["certificate_id"],
+                    }
+                )
                 return True
             except Exception as e:
-                results.append({
-                    'operation_id': op_id,
-                    'status': 'failed',
-                    'error': str(e)
-                })
+                results.append({"operation_id": op_id, "status": "failed", "error": str(e)})
                 return False
 
         start_time = time.time()
@@ -234,7 +220,7 @@ class TestConcurrentOperations:
 
         # Verify results
         assert len(results) == num_operations
-        successful_results = [r for r in results if r['status'] == 'success']
+        successful_results = [r for r in results if r["status"] == "success"]
         assert len(successful_results) == num_operations
 
         # Performance assertions (should complete within reasonable time)
@@ -256,9 +242,7 @@ class TestRateLimiting:
 
         # Mock response with rate limit headers
         mock_response = Mock()
-        mock_response.headers = {
-            'X-RateLimit-Remaining': '4999'
-        }
+        mock_response.headers = {"X-RateLimit-Remaining": "4999"}
 
         api_client._update_rate_limit_from_response(mock_response)
         assert api_client.rate_limit_remaining == 4999
@@ -267,15 +251,15 @@ class TestRateLimiting:
         """Test rate limiting with mock API responses."""
         from tests.fixtures.zerossl_responses import RATE_LIMIT_EXCEEDED_HEADERS, ERROR_RATE_LIMIT
 
-        with patch('requests.Session') as mock_session_class:
+        with patch("requests.Session") as mock_session_class:
             mock_session = Mock()
             mock_session_class.return_value = mock_session
 
             # First response succeeds
             success_response = Mock()
             success_response.status_code = 200
-            success_response.json.return_value = {'id': 'cert-123', 'status': 'draft'}
-            success_response.headers = {'X-RateLimit-Remaining': '1'}
+            success_response.json.return_value = {"id": "cert-123", "status": "draft"}
+            success_response.headers = {"X-RateLimit-Remaining": "1"}
 
             # Second response hits rate limit
             rate_limit_response = Mock()
@@ -288,52 +272,55 @@ class TestRateLimiting:
             api_client = ZeroSSLAPIClient("test-api-key-1234567890123456")
 
             # First request should succeed
-            result1 = api_client.create_certificate(['example.com'], 'mock-csr')
-            assert result1['id'] == 'cert-123'
+            result1 = api_client.create_certificate(["example.com"], "mock-csr")
+            assert result1["id"] == "cert-123"
             assert api_client.rate_limit_remaining == 1
 
             # Second request should raise rate limit error
             from plugins.module_utils.zerossl.exceptions import ZeroSSLRateLimitError
+
             with pytest.raises(ZeroSSLRateLimitError):
-                api_client.create_certificate(['example2.com'], 'mock-csr')
+                api_client.create_certificate(["example2.com"], "mock-csr")
 
     def test_rapid_api_calls_performance(self):
         """Test performance under rapid API calls."""
         mock_api_client = MockZeroSSLAPIClient("test-api-key")
-        rapid_calls = PERFORMANCE_TEST_DATA['rapid_api_calls']
+        rapid_calls = PERFORMANCE_TEST_DATA["rapid_api_calls"]
 
         results = []
         start_time = time.time()
 
         for i, call_info in enumerate(rapid_calls):
-            action = call_info['action']
-            delay = call_info['delay']
+            action = call_info["action"]
+            delay = call_info["delay"]
 
             try:
-                if action == 'create':
-                    result = mock_api_client.create_certificate(['example.com'], 'mock-csr')
-                elif action == 'status':
-                    result = mock_api_client.get_certificate('cert-123')
-                elif action == 'validate':
-                    result = mock_api_client.validate_certificate('cert-123', 'HTTP_CSR_HASH')
-                elif action == 'download':
-                    result = mock_api_client.download_certificate('cert-123')
+                if action == "create":
+                    result = mock_api_client.create_certificate(["example.com"], "mock-csr")
+                elif action == "status":
+                    result = mock_api_client.get_certificate("cert-123")
+                elif action == "validate":
+                    result = mock_api_client.validate_certificate("cert-123", "HTTP_CSR_HASH")
+                elif action == "download":
+                    result = mock_api_client.download_certificate("cert-123")
 
-                results.append({'call_id': i, 'action': action, 'status': 'success'})
+                results.append({"call_id": i, "action": action, "status": "success"})
                 time.sleep(delay)
             except Exception as e:
-                results.append({'call_id': i, 'action': action, 'status': 'failed', 'error': str(e)})
+                results.append(
+                    {"call_id": i, "action": action, "status": "failed", "error": str(e)}
+                )
 
         end_time = time.time()
         total_duration = end_time - start_time
 
         # All calls should succeed with mock client
         assert len(results) == len(rapid_calls)
-        successful_calls = [r for r in results if r['status'] == 'success']
+        successful_calls = [r for r in results if r["status"] == "success"]
         assert len(successful_calls) == len(rapid_calls)
 
         # Performance check
-        expected_duration = sum(call['delay'] for call in rapid_calls)
+        expected_duration = sum(call["delay"] for call in rapid_calls)
         assert total_duration >= expected_duration  # Should take at least the sum of delays
 
         print(f"Completed {len(rapid_calls)} rapid API calls in {total_duration:.2f}s")
@@ -345,6 +332,7 @@ class TestCachePerformance:
     def setup_method(self):
         """Setup for each test method."""
         from plugins.module_utils.zerossl.cache import CertificateCache
+
         # Create cache with higher max size for performance testing
         test_cache = CertificateCache(max_cache_size=2000)
         self.cache_manager = CertificateCacheManager(cache=test_cache)
@@ -352,7 +340,7 @@ class TestCachePerformance:
     def test_cache_hit_performance(self):
         """Test cache hit performance."""
         certificate_id = "test-cert-123"
-        test_data = {'status': 'issued', 'expires': '2025-04-15 10:30:00'}
+        test_data = {"status": "issued", "expires": "2025-04-15 10:30:00"}
 
         # Warm up the cache
         self.cache_manager.set_certificate_status(certificate_id, test_data)
@@ -385,16 +373,16 @@ class TestCachePerformance:
                 local_results = []
                 for i in range(operations_per_thread):
                     cert_id = f"cert-{thread_id}-{i}"
-                    data = {'status': 'issued', 'thread_id': thread_id, 'operation': i}
+                    data = {"status": "issued", "thread_id": thread_id, "operation": i}
 
                     # Set and get operations
                     self.cache_manager.set_certificate_status(cert_id, data)
                     retrieved = self.cache_manager.get_certificate_status(cert_id)
 
                     if retrieved == data:
-                        local_results.append('success')
+                        local_results.append("success")
                     else:
-                        local_results.append('mismatch')
+                        local_results.append("mismatch")
 
                 results.extend(local_results)
                 return len(local_results)
@@ -406,10 +394,7 @@ class TestCachePerformance:
 
         # Run concurrent cache operations
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [
-                executor.submit(cache_operations, i)
-                for i in range(num_threads)
-            ]
+            futures = [executor.submit(cache_operations, i) for i in range(num_threads)]
 
             total_operations = sum(future.result() for future in as_completed(futures))
 
@@ -420,7 +405,7 @@ class TestCachePerformance:
         expected_operations = num_threads * operations_per_thread
         assert total_operations == expected_operations
 
-        successful_operations = [r for r in results if r == 'success']
+        successful_operations = [r for r in results if r == "success"]
         assert len(successful_operations) == expected_operations
 
         # Performance check
@@ -443,10 +428,10 @@ class TestCachePerformance:
         for i in range(num_entries):
             cert_id = f"cert-{i:04d}"
             data = {
-                'status': 'issued',
-                'expires': '2025-04-15 10:30:00',
-                'domains': [f'example{i}.com', f'www.example{i}.com'],
-                'large_data': 'x' * 1000  # 1KB of data per entry
+                "status": "issued",
+                "expires": "2025-04-15 10:30:00",
+                "domains": [f"example{i}.com", f"www.example{i}.com"],
+                "large_data": "x" * 1000,  # 1KB of data per entry
             }
             self.cache_manager.set_certificate_status(cert_id, data)
 
@@ -462,14 +447,14 @@ class TestCachePerformance:
 
         # Test cache cleanup
         stats = self.cache_manager.get_cache_statistics()
-        assert stats['memory_entries'] == num_entries
+        assert stats["memory_entries"] == num_entries
 
         # Force cleanup
         self.cache_manager.cleanup_expired_entries()
 
         # Memory should be manageable
         final_stats = self.cache_manager.get_cache_statistics()
-        assert final_stats['memory_entries'] <= num_entries
+        assert final_stats["memory_entries"] <= num_entries
 
 
 class TestPerformanceBenchmarks:
@@ -484,20 +469,20 @@ class TestPerformanceBenchmarks:
 
         operations = [
             {
-                'domains': ['benchmark1.com'],
-                'certificate_path': str(test_dirs['certs'] / 'benchmark1.crt'),
-                'private_key_path': str(test_dirs['private'] / 'benchmark1.key')
+                "domains": ["benchmark1.com"],
+                "certificate_path": str(test_dirs["certs"] / "benchmark1.crt"),
+                "private_key_path": str(test_dirs["private"] / "benchmark1.key"),
             },
             {
-                'domains': ['benchmark2.com', 'www.benchmark2.com'],
-                'certificate_path': str(test_dirs['certs'] / 'benchmark2.crt'),
-                'private_key_path': str(test_dirs['private'] / 'benchmark2.key')
+                "domains": ["benchmark2.com", "www.benchmark2.com"],
+                "certificate_path": str(test_dirs["certs"] / "benchmark2.crt"),
+                "private_key_path": str(test_dirs["private"] / "benchmark2.key"),
             },
             {
-                'domains': ['*.benchmark3.com'],
-                'certificate_path': str(test_dirs['certs'] / 'benchmark3.crt'),
-                'validation_method': 'DNS_CSR_HASH'
-            }
+                "domains": ["*.benchmark3.com"],
+                "certificate_path": str(test_dirs["certs"] / "benchmark3.crt"),
+                "validation_method": "DNS_CSR_HASH",
+            },
         ]
 
         results = []
@@ -509,66 +494,72 @@ class TestPerformanceBenchmarks:
             try:
                 # Create certificate
                 create_result = cert_manager.create_certificate(
-                    domains=operation['domains'],
+                    domains=operation["domains"],
                     csr="mock-csr-content",
-                    validation_method=operation.get('validation_method', 'HTTP_CSR_HASH')
+                    validation_method=operation.get("validation_method", "HTTP_CSR_HASH"),
                 )
 
                 # Validate certificate
                 validate_result = cert_manager.validate_certificate(
-                    create_result['certificate_id'],
-                    operation.get('validation_method', 'HTTP_CSR_HASH')
+                    create_result["certificate_id"],
+                    operation.get("validation_method", "HTTP_CSR_HASH"),
                 )
 
                 # Download certificate
-                download_result = cert_manager.download_certificate(
-                    create_result['certificate_id']
-                )
+                download_result = cert_manager.download_certificate(create_result["certificate_id"])
 
                 # Simulate file writing
-                if operation.get('certificate_path'):
-                    with open(operation['certificate_path'], 'w') as f:
-                        f.write(download_result['certificate'])
+                if operation.get("certificate_path"):
+                    with open(operation["certificate_path"], "w") as f:
+                        f.write(download_result["certificate"])
 
-                if operation.get('private_key_path'):
-                    with open(operation['private_key_path'], 'w') as f:
-                        f.write(download_result['private_key'])
+                if operation.get("private_key_path"):
+                    with open(operation["private_key_path"], "w") as f:
+                        f.write(download_result["private_key"])
 
                 end_time = time.time()
                 operation_duration = end_time - start_time
 
-                results.append({
-                    'operation_id': i,
-                    'domains': operation['domains'],
-                    'duration': operation_duration,
-                    'status': 'success'
-                })
+                results.append(
+                    {
+                        "operation_id": i,
+                        "domains": operation["domains"],
+                        "duration": operation_duration,
+                        "status": "success",
+                    }
+                )
 
             except Exception as e:
                 end_time = time.time()
                 operation_duration = end_time - start_time
 
-                results.append({
-                    'operation_id': i,
-                    'domains': operation['domains'],
-                    'duration': operation_duration,
-                    'status': 'failed',
-                    'error': str(e)
-                })
+                results.append(
+                    {
+                        "operation_id": i,
+                        "domains": operation["domains"],
+                        "duration": operation_duration,
+                        "status": "failed",
+                        "error": str(e),
+                    }
+                )
 
         total_end_time = time.time()
         total_duration = total_end_time - total_start_time
 
         # Verify all operations succeeded
-        successful_operations = [r for r in results if r['status'] == 'success']
+        successful_operations = [r for r in results if r["status"] == "success"]
         assert len(successful_operations) == len(operations)
 
         # Performance assertions
-        max_operation_time = max(r['duration'] for r in results)
-        avg_operation_time = sum(r['duration'] for r in results) / len(results)
+        max_operation_time = max(r["duration"] for r in results)
+        avg_operation_time = sum(r["duration"] for r in results) / len(results)
 
-        assert max_operation_time < 1.0, f"Slowest operation took too long: {max_operation_time:.2f}s"
-        assert avg_operation_time < 0.5, f"Average operation time too high: {avg_operation_time:.2f}s"
+        assert (
+            max_operation_time < 1.0
+        ), f"Slowest operation took too long: {max_operation_time:.2f}s"
+        assert (
+            avg_operation_time < 0.5
+        ), f"Average operation time too high: {avg_operation_time:.2f}s"
 
         print(f"End-to-end benchmark results:")
         print(f"  Total time: {total_duration:.2f}s")
@@ -577,8 +568,8 @@ class TestPerformanceBenchmarks:
         print(f"  Operations per second: {len(operations) / total_duration:.1f}")
 
         return {
-            'total_duration': total_duration,
-            'avg_operation_time': avg_operation_time,
-            'max_operation_time': max_operation_time,
-            'operations_per_second': len(operations) / total_duration
+            "total_duration": total_duration,
+            "avg_operation_time": avg_operation_time,
+            "max_operation_time": max_operation_time,
+            "operations_per_second": len(operations) / total_duration,
         }

@@ -15,11 +15,7 @@ from urllib.parse import urlparse
 import dns.resolver
 from dns.resolver import NXDOMAIN, NoAnswer
 
-from .exceptions import (
-    ZeroSSLValidationError,
-    ZeroSSLFileSystemError,
-    ZeroSSLTimeoutError
-)
+from .exceptions import ZeroSSLValidationError, ZeroSSLFileSystemError, ZeroSSLTimeoutError
 from .utils import parse_validation_url, is_wildcard_domain
 
 
@@ -31,12 +27,7 @@ class ValidationHandler:
     manage DNS records, and verify domain ownership for certificate validation.
     """
 
-    def __init__(
-        self,
-        http_timeout: int = 30,
-        dns_timeout: int = 60,
-        max_retries: int = 3
-    ):
+    def __init__(self, http_timeout: int = 30, dns_timeout: int = 60, max_retries: int = 3):
         """
         Initialize Validation Handler.
 
@@ -65,28 +56,28 @@ class ValidationHandler:
         validation_files = []
 
         for domain, domain_data in validation_data.items():
-            if 'file_validation_url_http' not in domain_data:
+            if "file_validation_url_http" not in domain_data:
                 raise ZeroSSLValidationError(
                     f"Missing HTTP validation URL for domain: {domain}",
                     domain=domain,
-                    validation_method="HTTP_CSR_HASH"
+                    validation_method="HTTP_CSR_HASH",
                 )
 
-            if 'file_validation_content' not in domain_data:
+            if "file_validation_content" not in domain_data:
                 raise ZeroSSLValidationError(
                     f"Missing validation content for domain: {domain}",
                     domain=domain,
-                    validation_method="HTTP_CSR_HASH"
+                    validation_method="HTTP_CSR_HASH",
                 )
 
-            url_info = parse_validation_url(domain_data['file_validation_url_http'])
+            url_info = parse_validation_url(domain_data["file_validation_url_http"])
 
             validation_file = {
-                'domain': domain,
-                'filename': url_info['filename'],
-                'content': domain_data['file_validation_content'],
-                'url_path': url_info['path'],
-                'full_url': domain_data['file_validation_url_http']
+                "domain": domain,
+                "filename": url_info["filename"],
+                "content": domain_data["file_validation_content"],
+                "url_path": url_info["path"],
+                "full_url": domain_data["file_validation_url_http"],
             }
 
             validation_files.append(validation_file)
@@ -96,19 +87,17 @@ class ValidationHandler:
     def _extract_filename_from_url(self, url: str) -> str:
         """Extract filename from validation URL."""
         parsed = urlparse(url)
-        path_parts = parsed.path.strip('/').split('/')
-        return path_parts[-1] if path_parts else ''
+        path_parts = parsed.path.strip("/").split("/")
+        return path_parts[-1] if path_parts else ""
 
     def _construct_file_path(self, base_path: str, url_path: str) -> str:
         """Construct full file path for validation file."""
         # Remove leading slash from url_path
-        relative_path = url_path.lstrip('/')
+        relative_path = url_path.lstrip("/")
         return str(Path(base_path) / relative_path)
 
     def place_validation_files(
-        self,
-        validation_files: List[Dict[str, Any]],
-        web_root: str
+        self, validation_files: List[Dict[str, Any]], web_root: str
     ) -> Dict[str, Any]:
         """
         Place validation files in the web root directory.
@@ -123,11 +112,7 @@ class ValidationHandler:
         Raises:
             ZeroSSLFileSystemError: If file placement fails
         """
-        result = {
-            'success': True,
-            'files_created': [],
-            'error': None
-        }
+        result = {"success": True, "files_created": [], "error": None}
 
         created_files = []
 
@@ -135,41 +120,41 @@ class ValidationHandler:
 
             for vf in validation_files:
                 # Construct full file path
-                file_path = self._construct_file_path(web_root, vf['url_path'])
+                file_path = self._construct_file_path(web_root, vf["url_path"])
                 file_path_obj = Path(file_path)
 
                 # Create directories if they don't exist
                 file_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
                 # Write validation content
-                file_path_obj.write_text('\n'.join(vf['content']))
+                file_path_obj.write_text("\n".join(vf["content"]))
 
                 # Set appropriate permissions
                 file_path_obj.chmod(0o644)
 
                 file_info = {
-                    'domain': vf['domain'],
-                    'path': str(file_path),
-                    'content': vf['content'],
-                    'url_path': vf['url_path']
+                    "domain": vf["domain"],
+                    "path": str(file_path),
+                    "content": vf["content"],
+                    "url_path": vf["url_path"],
                 }
 
                 created_files.append(file_info)
-                result['files_created'].append(file_info)
+                result["files_created"].append(file_info)
 
         except PermissionError as e:
-            result['success'] = False
-            result['error'] = f"Permission denied: {e}"
+            result["success"] = False
+            result["error"] = f"Permission denied: {e}"
 
             # Clean up any files we managed to create
-            self._cleanup_files([f['path'] for f in created_files])
+            self._cleanup_files([f["path"] for f in created_files])
 
         except Exception as e:
-            result['success'] = False
-            result['error'] = f"Failed to place validation files: {e}"
+            result["success"] = False
+            result["error"] = f"Failed to place validation files: {e}"
 
             # Clean up any files we managed to create
-            self._cleanup_files([f['path'] for f in created_files])
+            self._cleanup_files([f["path"] for f in created_files])
 
         return result
 
@@ -181,11 +166,7 @@ class ValidationHandler:
             except Exception:
                 pass  # Ignore cleanup errors
 
-    def verify_http_validation(
-        self,
-        validation_url: str,
-        expected_content: str
-    ) -> Dict[str, Any]:
+    def verify_http_validation(self, validation_url: str, expected_content: str) -> Dict[str, Any]:
         """
         Verify HTTP validation by fetching the validation URL.
 
@@ -199,29 +180,24 @@ class ValidationHandler:
         Raises:
             ZeroSSLValidationError: If verification fails
         """
-        result = {
-            'accessible': False,
-            'content_match': False,
-            'status_code': None,
-            'error': None
-        }
+        result = {"accessible": False, "content_match": False, "status_code": None, "error": None}
 
         try:
             response = requests.get(validation_url, timeout=self.http_timeout)
-            result['status_code'] = response.status_code
+            result["status_code"] = response.status_code
 
             if response.status_code == 200:
-                result['accessible'] = True
-                result['content_match'] = response.text.strip() == expected_content.strip()
+                result["accessible"] = True
+                result["content_match"] = response.text.strip() == expected_content.strip()
             else:
-                result['error'] = f"HTTP {response.status_code}: Validation URL not accessible"
+                result["error"] = f"HTTP {response.status_code}: Validation URL not accessible"
 
         except requests.exceptions.Timeout:
-            result['error'] = "Request timeout while accessing validation URL"
+            result["error"] = "Request timeout while accessing validation URL"
         except requests.exceptions.ConnectionError:
-            result['error'] = "Connection failed to validation URL"
+            result["error"] = "Connection failed to validation URL"
         except Exception as e:
-            result['error'] = f"Unexpected error: {e}"
+            result["error"] = f"Unexpected error: {e}"
 
         return result
 
@@ -241,25 +217,25 @@ class ValidationHandler:
         dns_records = []
 
         for domain, domain_data in validation_data.items():
-            if 'cname_validation_p1' not in domain_data:
+            if "cname_validation_p1" not in domain_data:
                 raise ZeroSSLValidationError(
                     f"Missing DNS CNAME record name for domain: {domain}",
                     domain=domain,
-                    validation_method="DNS_CSR_HASH"
+                    validation_method="DNS_CSR_HASH",
                 )
 
-            if 'cname_validation_p2' not in domain_data:
+            if "cname_validation_p2" not in domain_data:
                 raise ZeroSSLValidationError(
                     f"Missing DNS CNAME record value for domain: {domain}",
                     domain=domain,
-                    validation_method="DNS_CSR_HASH"
+                    validation_method="DNS_CSR_HASH",
                 )
 
             dns_record = {
-                'domain': domain,
-                'record_name': domain_data['cname_validation_p1'],  # Host-part (Name)
-                'record_type': 'CNAME',
-                'record_value': domain_data['cname_validation_p2']  # Point-to (Value)
+                "domain": domain,
+                "record_name": domain_data["cname_validation_p1"],  # Host-part (Name)
+                "record_type": "CNAME",
+                "record_value": domain_data["cname_validation_p2"],  # Point-to (Value)
             }
 
             dns_records.append(dns_record)
@@ -282,8 +258,8 @@ class ValidationHandler:
             DNS setup instructions
         """
         instructions = {
-            'records_to_create': dns_records,
-            'instructions': self._format_dns_instructions(dns_records)
+            "records_to_create": dns_records,
+            "instructions": self._format_dns_instructions(dns_records),
         }
 
         return instructions
@@ -294,30 +270,30 @@ class ValidationHandler:
         instructions.append("=" * 40)
 
         for i, record in enumerate(dns_records, 1):
-            instructions.extend([
-                f"{i}. Domain: {record['domain']}",
-                f"   Record Type: {record['record_type']}",
-                f"   Name (Host): {record['record_name']}",
-                f"   Points To (Value): {record['record_value']}",
-                ""
-            ])
+            instructions.extend(
+                [
+                    f"{i}. Domain: {record['domain']}",
+                    f"   Record Type: {record['record_type']}",
+                    f"   Name (Host): {record['record_name']}",
+                    f"   Points To (Value): {record['record_value']}",
+                    "",
+                ]
+            )
 
-        instructions.extend([
-            "Instructions:",
-            "1. Log into your DNS provider's control panel",
-            "2. Navigate to DNS management for your domain",
-            "3. Create CNAME records as specified above",
-            "4. Wait for DNS propagation (usually 5-30 minutes)",
-            "5. Trigger validation once records are live"
-        ])
+        instructions.extend(
+            [
+                "Instructions:",
+                "1. Log into your DNS provider's control panel",
+                "2. Navigate to DNS management for your domain",
+                "3. Create CNAME records as specified above",
+                "4. Wait for DNS propagation (usually 5-30 minutes)",
+                "5. Trigger validation once records are live",
+            ]
+        )
 
         return "\n".join(instructions)
 
-    def verify_dns_validation(
-        self,
-        record_name: str,
-        expected_value: str
-    ) -> Dict[str, Any]:
+    def verify_dns_validation(self, record_name: str, expected_value: str) -> Dict[str, Any]:
         """
         Verify DNS validation by checking CNAME record.
 
@@ -328,35 +304,30 @@ class ValidationHandler:
         Returns:
             Verification result
         """
-        result = {
-            'record_exists': False,
-            'value_match': False,
-            'actual_values': [],
-            'error': None
-        }
+        result = {"record_exists": False, "value_match": False, "actual_values": [], "error": None}
 
         try:
             resolver = dns.resolver.Resolver()
             resolver.timeout = self.dns_timeout
             resolver.lifetime = self.dns_timeout
 
-            answers = resolver.resolve(record_name, 'CNAME')
-            result['record_exists'] = True
+            answers = resolver.resolve(record_name, "CNAME")
+            result["record_exists"] = True
 
             # Extract CNAME record values
             for rdata in answers:
-                cname_value = rdata.to_text().rstrip('.')
-                result['actual_values'].append(cname_value)
+                cname_value = rdata.to_text().rstrip(".")
+                result["actual_values"].append(cname_value)
 
                 if cname_value == expected_value:
-                    result['value_match'] = True
+                    result["value_match"] = True
 
         except NXDOMAIN:
-            result['error'] = f"DNS record not found: {record_name}"
+            result["error"] = f"DNS record not found: {record_name}"
         except NoAnswer:
-            result['error'] = f"No CNAME record found for: {record_name}"
+            result["error"] = f"No CNAME record found for: {record_name}"
         except Exception as e:
-            result['error'] = f"DNS resolution failed: {e}"
+            result["error"] = f"DNS resolution failed: {e}"
 
         return result
 
@@ -373,10 +344,10 @@ class ValidationHandler:
         # If any domain is a wildcard, DNS validation is required
         for domain in domains:
             if is_wildcard_domain(domain):
-                return 'DNS_CSR_HASH'
+                return "DNS_CSR_HASH"
 
         # For regular domains, HTTP validation is usually easier
-        return 'HTTP_CSR_HASH'
+        return "HTTP_CSR_HASH"
 
     def cleanup_validation_files(self, file_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -388,30 +359,23 @@ class ValidationHandler:
         Returns:
             Cleanup result
         """
-        result = {
-            'success': True,
-            'files_removed': [],
-            'errors': []
-        }
+        result = {"success": True, "files_removed": [], "errors": []}
 
         for file_info in file_list:
             try:
-                file_path = Path(file_info['path'])
+                file_path = Path(file_info["path"])
                 if file_path.exists():
                     file_path.unlink()
-                    result['files_removed'].append(file_info['path'])
+                    result["files_removed"].append(file_info["path"])
 
                 # Try to remove empty parent directories
                 self._cleanup_empty_directories(file_path.parent)
 
             except Exception as e:
-                result['errors'].append({
-                    'file': file_info['path'],
-                    'error': str(e)
-                })
+                result["errors"].append({"file": file_info["path"], "error": str(e)})
 
-        if result['errors']:
-            result['success'] = False
+        if result["errors"]:
+            result["success"] = False
 
         return result
 
@@ -419,7 +383,7 @@ class ValidationHandler:
         """Remove empty parent directories up to .well-known."""
         try:
             # Only clean up directories we created (.well-known/pki-validation)
-            if directory.name == 'pki-validation' and directory.parent.name == '.well-known':
+            if directory.name == "pki-validation" and directory.parent.name == ".well-known":
                 if not any(directory.iterdir()):
                     directory.rmdir()
 
@@ -431,10 +395,8 @@ class ValidationHandler:
         except Exception:
             pass  # Ignore errors in cleanup
 
-
     def aggregate_validation_errors(
-        self,
-        validation_errors: List[Dict[str, Any]]
+        self, validation_errors: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Aggregate validation errors from multiple domains.
@@ -446,8 +408,8 @@ class ValidationHandler:
             Aggregated error information
         """
         return {
-            'message': f"Multiple domains failed validation: {len(validation_errors)} errors",
-            'failed_count': len(validation_errors),
-            'domain_errors': validation_errors,
-            'summary': [f"{err['domain']}: {err['error']}" for err in validation_errors]
+            "message": f"Multiple domains failed validation: {len(validation_errors)} errors",
+            "failed_count": len(validation_errors),
+            "domain_errors": validation_errors,
+            "summary": [f"{err['domain']}: {err['error']}" for err in validation_errors],
         }

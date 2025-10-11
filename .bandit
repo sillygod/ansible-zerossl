@@ -1,0 +1,9 @@
+# Bandit security scanner configuration
+# https://bandit.readthedocs.io/en/latest/config.html
+
+skips: ['B108', 'B110']
+
+# B108: Hardcoded temp directory - intentional use of /tmp for Ansible cache
+#       The cache directory is configurable and uses proper permissions (0o700)
+# B110: try-except-pass - used intentionally for cleanup operations where
+#       failures are acceptable and shouldn't break the main flow

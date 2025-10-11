@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 @dataclass
 class ValidationResults:
     """Results of comprehensive validation."""
+
     quality_gates: bool = False
     performance: bool = False
     coverage: bool = False
@@ -36,13 +37,15 @@ class ValidationResults:
     @property
     def overall_success(self) -> bool:
         """Check if all validations passed."""
-        return all([
-            self.quality_gates,
-            self.performance,
-            self.coverage,
-            self.unit_tests,
-            self.component_tests
-        ])
+        return all(
+            [
+                self.quality_gates,
+                self.performance,
+                self.coverage,
+                self.unit_tests,
+                self.component_tests,
+            ]
+        )
 
 
 class ComprehensiveValidator:
@@ -66,13 +69,15 @@ class ComprehensiveValidator:
 
         if result.returncode != 0:
             # Parse violations from output
-            lines = result.stdout.split('\n')
+            lines = result.stdout.split("\n")
             for line in lines:
-                if 'violations' in line.lower() or 'failed' in line.lower():
+                if "violations" in line.lower() or "failed" in line.lower():
                     violations.append(line.strip())
 
         success = result.returncode == 0
-        print(f"   {'✅ PASSED' if success else '❌ FAILED'} - Quality Gates ({execution_time:.2f}s)")
+        print(
+            f"   {'✅ PASSED' if success else '❌ FAILED'} - Quality Gates ({execution_time:.2f}s)"
+        )
 
         return success, execution_time, violations
 
@@ -88,23 +93,25 @@ class ComprehensiveValidator:
         benchmarks = {}
 
         # Parse performance results
-        lines = result.stdout.split('\n')
+        lines = result.stdout.split("\n")
         for line in lines:
-            if 'Total time:' in line:
+            if "Total time:" in line:
                 try:
-                    time_str = line.split(':')[1].strip().replace('s', '')
-                    benchmarks['unit_tests'] = float(time_str)
+                    time_str = line.split(":")[1].strip().replace("s", "")
+                    benchmarks["unit_tests"] = float(time_str)
                 except (IndexError, ValueError):
                     pass
-            elif 'Component tests:' in line and 'Total time:' in line:
+            elif "Component tests:" in line and "Total time:" in line:
                 try:
-                    time_str = line.split(':')[2].strip().replace('s', '')
-                    benchmarks['component_tests'] = float(time_str)
+                    time_str = line.split(":")[2].strip().replace("s", "")
+                    benchmarks["component_tests"] = float(time_str)
                 except (IndexError, ValueError):
                     pass
 
         success = result.returncode == 0
-        print(f"   {'✅ PASSED' if success else '❌ FAILED'} - Performance Validation ({execution_time:.2f}s)")
+        print(
+            f"   {'✅ PASSED' if success else '❌ FAILED'} - Performance Validation ({execution_time:.2f}s)"
+        )
 
         return success, execution_time, benchmarks
 
@@ -120,17 +127,19 @@ class ComprehensiveValidator:
         coverage_percentage = 0.0
 
         # Parse coverage percentage from output
-        lines = result.stdout.split('\n')
+        lines = result.stdout.split("\n")
         for line in lines:
-            if 'Overall Coverage:' in line:
+            if "Overall Coverage:" in line:
                 try:
-                    percentage_str = line.split(':')[1].strip().replace('%', '')
+                    percentage_str = line.split(":")[1].strip().replace("%", "")
                     coverage_percentage = float(percentage_str)
                 except (IndexError, ValueError):
                     pass
 
         success = result.returncode == 0
-        print(f"   {'✅ PASSED' if success else '❌ FAILED'} - Coverage Automation ({execution_time:.2f}s)")
+        print(
+            f"   {'✅ PASSED' if success else '❌ FAILED'} - Coverage Automation ({execution_time:.2f}s)"
+        )
 
         return success, execution_time, coverage_percentage
 
@@ -139,20 +148,14 @@ class ComprehensiveValidator:
         print("🧪 Running Unit Tests Benchmark...")
         start_time = time.time()
 
-        cmd = [
-            sys.executable, "-m", "pytest",
-            "tests/unit/",
-            "-v",
-            "--tb=short",
-            "--durations=10"
-        ]
+        cmd = [sys.executable, "-m", "pytest", "tests/unit/", "-v", "--tb=short", "--durations=10"]
 
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
         execution_time = time.time() - start_time
 
         # Parse test counts
-        test_counts = {'passed': 0, 'failed': 0, 'skipped': 0}
-        lines = result.stdout.split('\n')
+        test_counts = {"passed": 0, "failed": 0, "skipped": 0}
+        lines = result.stdout.split("\n")
 
         for line in lines:
             if "passed" in line and "failed" not in line:
@@ -160,7 +163,7 @@ class ComprehensiveValidator:
                     parts = line.split()
                     for i, part in enumerate(parts):
                         if part == "passed":
-                            test_counts['passed'] = int(parts[i-1])
+                            test_counts["passed"] = int(parts[i - 1])
                 except (IndexError, ValueError):
                     pass
             elif "failed" in line and "passed" in line:
@@ -168,9 +171,9 @@ class ComprehensiveValidator:
                     parts = line.split()
                     for i, part in enumerate(parts):
                         if part == "failed,":
-                            test_counts['failed'] = int(parts[i-1])
+                            test_counts["failed"] = int(parts[i - 1])
                         elif part == "passed":
-                            test_counts['passed'] = int(parts[i-1])
+                            test_counts["passed"] = int(parts[i - 1])
                 except (IndexError, ValueError):
                     pass
 
@@ -185,19 +188,21 @@ class ComprehensiveValidator:
         start_time = time.time()
 
         cmd = [
-            sys.executable, "-m", "pytest",
+            sys.executable,
+            "-m",
+            "pytest",
             "tests/component/",
             "-v",
             "--tb=short",
-            "--durations=10"
+            "--durations=10",
         ]
 
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
         execution_time = time.time() - start_time
 
         # Parse test counts
-        test_counts = {'passed': 0, 'failed': 0, 'skipped': 0}
-        lines = result.stdout.split('\n')
+        test_counts = {"passed": 0, "failed": 0, "skipped": 0}
+        lines = result.stdout.split("\n")
 
         for line in lines:
             if "passed" in line and "failed" not in line:
@@ -205,12 +210,14 @@ class ComprehensiveValidator:
                     parts = line.split()
                     for i, part in enumerate(parts):
                         if part == "passed":
-                            test_counts['passed'] = int(parts[i-1])
+                            test_counts["passed"] = int(parts[i - 1])
                 except (IndexError, ValueError):
                     pass
 
         success = result.returncode == 0
-        print(f"   {'✅ PASSED' if success else '❌ FAILED'} - Component Tests ({execution_time:.2f}s)")
+        print(
+            f"   {'✅ PASSED' if success else '❌ FAILED'} - Component Tests ({execution_time:.2f}s)"
+        )
 
         return success, execution_time, test_counts
 
@@ -219,18 +226,15 @@ class ComprehensiveValidator:
         print("🚀 Running Parallel Execution Benchmark...")
         start_time = time.time()
 
-        cmd = [
-            sys.executable, "-m", "pytest",
-            "-n", "auto",
-            "--tb=short",
-            "-q"
-        ]
+        cmd = [sys.executable, "-m", "pytest", "-n", "auto", "--tb=short", "-q"]
 
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
         execution_time = time.time() - start_time
 
         success = result.returncode == 0
-        print(f"   {'✅ PASSED' if success else '❌ FAILED'} - Parallel Tests ({execution_time:.2f}s)")
+        print(
+            f"   {'✅ PASSED' if success else '❌ FAILED'} - Parallel Tests ({execution_time:.2f}s)"
+        )
 
         return success, execution_time
 
@@ -251,28 +255,27 @@ class ComprehensiveValidator:
             f"Coverage Automation: {'✅' if self.results.coverage else '❌'}",
             f"Unit Tests: {'✅' if self.results.unit_tests else '❌'}",
             f"Component Tests: {'✅' if self.results.component_tests else '❌'}",
-            ""
+            "",
         ]
 
         # Test counts summary
         if self.results.test_counts:
-            unit_counts = self.results.test_counts.get('unit', {})
-            component_counts = self.results.test_counts.get('component', {})
+            unit_counts = self.results.test_counts.get("unit", {})
+            component_counts = self.results.test_counts.get("component", {})
 
-            report.extend([
-                "Test Execution Summary:",
-                "-" * 24,
-                f"Unit Tests: {unit_counts.get('passed', 0)} passed, {unit_counts.get('failed', 0)} failed",
-                f"Component Tests: {component_counts.get('passed', 0)} passed, {component_counts.get('failed', 0)} failed",
-                ""
-            ])
+            report.extend(
+                [
+                    "Test Execution Summary:",
+                    "-" * 24,
+                    f"Unit Tests: {unit_counts.get('passed', 0)} passed, {unit_counts.get('failed', 0)} failed",
+                    f"Component Tests: {component_counts.get('passed', 0)} passed, {component_counts.get('failed', 0)} failed",
+                    "",
+                ]
+            )
 
         # Performance benchmarks
         if self.results.benchmarks:
-            report.extend([
-                "Performance Benchmarks:",
-                "-" * 24
-            ])
+            report.extend(["Performance Benchmarks:", "-" * 24])
 
             for benchmark_name, time_value in self.results.benchmarks.items():
                 status = "✅" if time_value <= 15.0 else "⚠️"  # 15s threshold
@@ -282,10 +285,7 @@ class ComprehensiveValidator:
 
         # Violations summary
         if self.results.violations:
-            report.extend([
-                "Quality Violations:",
-                "-" * 19
-            ])
+            report.extend(["Quality Violations:", "-" * 19])
 
             for violation in self.results.violations[:10]:  # Show first 10
                 report.append(f"❌ {violation}")
@@ -301,29 +301,30 @@ class ComprehensiveValidator:
 
         if total_time > 0:
             overhead = ((total_time - benchmark_time) / total_time) * 100
-            report.extend([
-                "Performance Analysis:",
-                "-" * 21,
-                f"Total execution time: {total_time:.2f}s",
-                f"Test execution time: {benchmark_time:.2f}s",
-                f"Overhead: {overhead:.1f}%",
-                ""
-            ])
+            report.extend(
+                [
+                    "Performance Analysis:",
+                    "-" * 21,
+                    f"Total execution time: {total_time:.2f}s",
+                    f"Test execution time: {benchmark_time:.2f}s",
+                    f"Overhead: {overhead:.1f}%",
+                    "",
+                ]
+            )
 
         # Recommendations
-        report.extend([
-            "Recommendations:",
-            "-" * 16
-        ])
+        report.extend(["Recommendations:", "-" * 16])
 
         if self.results.overall_success:
-            report.extend([
-                "✅ All validations passed successfully!",
-                "✅ Test suite meets all quality standards",
-                "✅ Performance requirements satisfied",
-                "✅ Coverage targets achieved",
-                ""
-            ])
+            report.extend(
+                [
+                    "✅ All validations passed successfully!",
+                    "✅ Test suite meets all quality standards",
+                    "✅ Performance requirements satisfied",
+                    "✅ Coverage targets achieved",
+                    "",
+                ]
+            )
         else:
             if not self.results.quality_gates:
                 report.append("❌ Fix quality gate violations before proceeding")
@@ -340,11 +341,13 @@ class ComprehensiveValidator:
         # Quality metrics
         if self.results.coverage_percentage > 0:
             coverage_status = "✅" if self.results.coverage_percentage >= 80 else "❌"
-            report.extend([
-                "Quality Metrics:",
-                "-" * 16,
-                f"{coverage_status} Coverage: {self.results.coverage_percentage:.1f}% (target: ≥80%)",
-            ])
+            report.extend(
+                [
+                    "Quality Metrics:",
+                    "-" * 16,
+                    f"{coverage_status} Coverage: {self.results.coverage_percentage:.1f}% (target: ≥80%)",
+                ]
+            )
 
         return "\n".join(report)
 
@@ -362,11 +365,11 @@ class ComprehensiveValidator:
             "coverage_percentage": self.results.coverage_percentage,
             "test_counts": self.results.test_counts,
             "violations": self.results.violations,
-            "benchmarks": self.results.benchmarks
+            "benchmarks": self.results.benchmarks,
         }
 
         results_file = self.project_root / "comprehensive_validation_results.json"
-        with open(results_file, 'w') as f:
+        with open(results_file, "w") as f:
             json.dump(results_data, f, indent=2)
 
         print(f"Results saved to: {results_file}")
@@ -396,19 +399,19 @@ class ComprehensiveValidator:
         # Run unit tests benchmark
         unit_success, unit_time, unit_counts = self.run_unit_tests_benchmark()
         self.results.unit_tests = unit_success
-        self.results.test_counts['unit'] = unit_counts
-        self.results.benchmarks['unit_tests_direct'] = unit_time
+        self.results.test_counts["unit"] = unit_counts
+        self.results.benchmarks["unit_tests_direct"] = unit_time
 
         # Run component tests benchmark
         comp_success, comp_time, comp_counts = self.run_component_tests_benchmark()
         self.results.component_tests = comp_success
-        self.results.test_counts['component'] = comp_counts
-        self.results.benchmarks['component_tests_direct'] = comp_time
+        self.results.test_counts["component"] = comp_counts
+        self.results.benchmarks["component_tests_direct"] = comp_time
 
         # Run parallel benchmark (optional)
         try:
             parallel_success, parallel_time = self.run_parallel_benchmark()
-            self.results.benchmarks['parallel_execution'] = parallel_time
+            self.results.benchmarks["parallel_execution"] = parallel_time
         except Exception as e:
             print(f"⚠️  Parallel benchmark failed: {e}")
 

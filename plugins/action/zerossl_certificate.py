@@ -2,10 +2,11 @@
 # Copyright: (c) 2025, Ansible ZeroSSL Plugin Contributors
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: zerossl_certificate
 author: Ansible ZeroSSL Plugin Contributors
@@ -183,9 +184,9 @@ requirements:
   - requests
   - cryptography
   - dnspython (for DNS validation verification)
-'''
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Create and deploy certificate with automatic validation
   zerossl_certificate:
     api_key: "{{ zerossl_api_key }}"
@@ -290,9 +291,9 @@ EXAMPLES = r'''
     domains:
       - old.example.com
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 certificate_id:
   description: ZeroSSL certificate ID
   returned: always (except for absent state)
@@ -401,7 +402,7 @@ retryable:
   returned: when failed=true
   type: bool
   sample: true
-'''
+"""
 
 from ansible.plugins.action import ActionBase
 from ansible.module_utils.common.text.converters import to_text
@@ -424,7 +425,7 @@ try:
         ZeroSSLFileSystemError,
         format_exception_for_ansible,
         generate_csr,
-        create_file_with_permissions
+        create_file_with_permissions,
     )
     from ansible.module_utils.zerossl.cache import CertificateCacheManager
     from ansible.module_utils.zerossl.concurrency import (
@@ -432,14 +433,15 @@ try:
         acquire_domain_lock,
         acquire_multi_domain_lock,
         safe_write_file,
-        get_concurrency_manager
+        get_concurrency_manager,
     )
 except ImportError:
     # Fall back to local imports for development/testing
     try:
         import sys
         import os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
         from module_utils.zerossl import (
             ZeroSSLAPIClient,
@@ -454,7 +456,7 @@ except ImportError:
             ZeroSSLFileSystemError,
             format_exception_for_ansible,
             generate_csr,
-            create_file_with_permissions
+            create_file_with_permissions,
         )
         from module_utils.zerossl.cache import CertificateCacheManager
         from module_utils.zerossl.concurrency import (
@@ -462,7 +464,7 @@ except ImportError:
             acquire_domain_lock,
             acquire_multi_domain_lock,
             safe_write_file,
-            get_concurrency_manager
+            get_concurrency_manager,
         )
     except ImportError as e:
         raise AnsibleActionFail(f"Failed to import ZeroSSL module_utils: {e}")
@@ -498,13 +500,15 @@ class ActionModule(ActionBase):
         module_args = self._task.args.copy()
 
         # Initialize result structure
-        result.update({
-            'changed': False,
-            'certificate_id': None,
-            'status': None,
-            'domains': None,
-            'msg': 'No operation performed'
-        })
+        result.update(
+            {
+                "changed": False,
+                "certificate_id": None,
+                "status": None,
+                "domains": None,
+                "msg": "No operation performed",
+            }
+        )
 
         try:
             # Validate parameters
@@ -552,7 +556,7 @@ class ActionModule(ActionBase):
     def _initialize_components(self, params):
         """Initialize caching and concurrency components."""
         # Initialize cache manager if caching is enabled
-        if params.get('enable_caching', True):
+        if params.get("enable_caching", True):
             self.cache_manager = CertificateCacheManager()
             self.display.vv("ZeroSSL: Certificate caching enabled")
 
@@ -562,17 +566,14 @@ class ActionModule(ActionBase):
 
     def _create_api_client(self, params):
         """Create ZeroSSL API client with validated parameters."""
-        return ZeroSSLAPIClient(
-            api_key=params['api_key'],
-            timeout=params['timeout']
-        )
+        return ZeroSSLAPIClient(api_key=params["api_key"], timeout=params["timeout"])
 
     def _create_certificate_manager(self, api_client):
         """Create certificate manager with API client and caching."""
         return CertificateManager(
             api_key=api_client.api_key,
             api_client=api_client,
-            enable_caching=self.cache_manager is not None
+            enable_caching=self.cache_manager is not None,
         )
 
     def _create_validation_handler(self):
@@ -581,19 +582,19 @@ class ActionModule(ActionBase):
 
     def _execute_operation(self, params, api_client, cert_manager, validation_handler, task_vars):
         """Execute the requested certificate operation."""
-        state = params['state']
+        state = params["state"]
 
-        if state == 'present':
+        if state == "present":
             return self._handle_present_state(params, cert_manager, validation_handler, task_vars)
-        elif state == 'request':
+        elif state == "request":
             return self._handle_request_state(params, cert_manager, validation_handler)
-        elif state == 'validate':
+        elif state == "validate":
             return self._handle_validate_state(params, cert_manager)
-        elif state == 'download':
+        elif state == "download":
             return self._handle_download_state(params, cert_manager)
-        elif state == 'check_renew_or_create':
+        elif state == "check_renew_or_create":
             return self._handle_check_renewal_state(params, cert_manager)
-        elif state == 'absent':
+        elif state == "absent":
             return self._handle_absent_state(params, cert_manager)
         else:
             raise ZeroSSLConfigurationError(f"Unsupported state: {state}")
@@ -601,56 +602,65 @@ class ActionModule(ActionBase):
     def _handle_present_state(self, params, cert_manager, validation_handler, task_vars):
         """Handle present state - ensure certificate exists and is valid."""
         # Use multi-domain lock to prevent concurrent operations on same domains
-        with acquire_multi_domain_lock(params['domains'], 'certificate_present'):
-            return self._handle_present_state_locked(params, cert_manager, validation_handler, task_vars)
+        with acquire_multi_domain_lock(params["domains"], "certificate_present"):
+            return self._handle_present_state_locked(
+                params, cert_manager, validation_handler, task_vars
+            )
 
     def _handle_present_state_locked(self, params, cert_manager, validation_handler, task_vars):
         """Handle present state with domain locks acquired."""
-        result = {'changed': False, 'msg': 'Certificate already exists and is valid'}
+        result = {"changed": False, "msg": "Certificate already exists and is valid"}
 
         # Check if certificate already exists and is valid
-        if not params.get('force', False):
+        if not params.get("force", False):
             needs_renewal = cert_manager.needs_renewal(
-                params['domains'],
-                params['renew_threshold_days']
+                params["domains"], params["renew_threshold_days"]
             )
 
             if not needs_renewal:
                 # Certificate is valid, check if files need updating
-                cert_id = cert_manager.find_certificate_for_domains(params['domains'])
+                cert_id = cert_manager.find_certificate_for_domains(params["domains"])
                 if cert_id:
                     cert_info = cert_manager.get_certificate_status(cert_id)
 
                     # Check if certificate files need to be updated
-                    files_need_update = self._check_certificate_files_need_update(cert_id, cert_manager, params)
+                    files_need_update = self._check_certificate_files_need_update(
+                        cert_id, cert_manager, params
+                    )
 
                     if not files_need_update:
-                        result.update({
-                            'certificate_id': cert_id,
-                            'status': cert_info['status'],
-                            'domains': params['domains'],
-                            'expires': cert_info.get('expires'),
-                            'msg': f"Certificate valid until {cert_info.get('expires')}"
-                        })
+                        result.update(
+                            {
+                                "certificate_id": cert_id,
+                                "status": cert_info["status"],
+                                "domains": params["domains"],
+                                "expires": cert_info.get("expires"),
+                                "msg": f"Certificate valid until {cert_info.get('expires')}",
+                            }
+                        )
                         return result
                     else:
                         # Certificate is valid but files need updating
-                        if cert_info['status'] == 'issued':
+                        if cert_info["status"] == "issued":
                             bundle = cert_manager.download_certificate(cert_id)
                             files_created = self._save_certificate_bundle(bundle, params)
-                            result.update({
-                                'changed': True,
-                                'certificate_id': cert_id,
-                                'status': cert_info['status'],
-                                'domains': params['domains'],
-                                'expires': cert_info.get('expires'),
-                                'files_created': files_created,
-                                'msg': 'Certificate files updated'
-                            })
+                            result.update(
+                                {
+                                    "changed": True,
+                                    "certificate_id": cert_id,
+                                    "status": cert_info["status"],
+                                    "domains": params["domains"],
+                                    "expires": cert_info.get("expires"),
+                                    "files_created": files_created,
+                                    "msg": "Certificate files updated",
+                                }
+                            )
                             return result
                         else:
                             # Certificate exists but not yet issued, continue with normal flow
-                            self.display.vv(f"Certificate {cert_id} not yet issued (status: {cert_info['status']}), continuing with certificate creation flow")
+                            self.display.vv(
+                                f"Certificate {cert_id} not yet issued (status: {cert_info['status']}), continuing with certificate creation flow"
+                            )
                             # Fall through to certificate creation logic below
 
         # Need to create/renew certificate
@@ -658,138 +668,137 @@ class ActionModule(ActionBase):
 
         # Create certificate
         create_result = cert_manager.create_certificate(
-            domains=params['domains'],
+            domains=params["domains"],
             csr=csr_content,
-            validation_method=params['validation_method'],
-            validity_days=params['validity_days']
+            validation_method=params["validation_method"],
+            validity_days=params["validity_days"],
         )
 
-        result.update({
-            'changed': True,
-            'certificate_id': create_result['certificate_id'],
-            'status': create_result['status'],
-            'domains': create_result['domains']
-        })
+        result.update(
+            {
+                "changed": True,
+                "certificate_id": create_result["certificate_id"],
+                "status": create_result["status"],
+                "domains": create_result["domains"],
+            }
+        )
 
         # Handle validation based on method
-        if params['validation_method'] == 'HTTP_CSR_HASH':
+        if params["validation_method"] == "HTTP_CSR_HASH":
             # Place validation files and validate
-            if create_result.get('validation_files'):
-                self._place_validation_files(
-                    create_result['validation_files'],
-                    params['web_root']
-                )
+            if create_result.get("validation_files"):
+                self._place_validation_files(create_result["validation_files"], params["web_root"])
 
                 # Validate certificate
                 validate_result = cert_manager.validate_certificate(
-                    create_result['certificate_id'],
-                    params['validation_method']
+                    create_result["certificate_id"], params["validation_method"]
                 )
-                result['validation_result'] = validate_result
+                result["validation_result"] = validate_result
 
                 # Wait for validation and download
                 cert_manager.poll_validation_status(
-                    create_result['certificate_id'],
-                    max_attempts=params['validation_timeout'] // 10
+                    create_result["certificate_id"], max_attempts=params["validation_timeout"] // 10
                 )
 
                 # Download certificate
-                bundle = cert_manager.download_certificate(create_result['certificate_id'])
+                bundle = cert_manager.download_certificate(create_result["certificate_id"])
                 files_created = self._save_certificate_bundle(bundle, params)
-                result['files_created'] = files_created
-                result['msg'] = 'Certificate created, validated, and downloaded successfully'
+                result["files_created"] = files_created
+                result["msg"] = "Certificate created, validated, and downloaded successfully"
 
-        elif params['validation_method'] == 'DNS_CSR_HASH':
+        elif params["validation_method"] == "DNS_CSR_HASH":
             # Return DNS records for manual setup
-            result['dns_records'] = create_result.get('dns_records', [])
-            result['msg'] = 'Certificate created. Complete DNS validation manually.'
+            result["dns_records"] = create_result.get("dns_records", [])
+            result["msg"] = "Certificate created. Complete DNS validation manually."
 
         return result
 
     def _handle_request_state(self, params, cert_manager, validation_handler):
         """Handle request state - create certificate and return validation info."""
         # Use multi-domain lock to prevent concurrent requests for same domains
-        with acquire_multi_domain_lock(params['domains'], 'certificate_request'):
+        with acquire_multi_domain_lock(params["domains"], "certificate_request"):
             csr_content = self._get_csr_content(params)
 
             create_result = cert_manager.create_certificate(
-                domains=params['domains'],
+                domains=params["domains"],
                 csr=csr_content,
-                validation_method=params['validation_method'],
-                validity_days=params['validity_days']
+                validation_method=params["validation_method"],
+                validity_days=params["validity_days"],
             )
 
             result = {
-                'changed': True,
-                'certificate_id': create_result['certificate_id'],
-                'status': create_result['status'],
-                'domains': create_result['domains'],
-                'msg': 'Certificate request created successfully'
+                "changed": True,
+                "certificate_id": create_result["certificate_id"],
+                "status": create_result["status"],
+                "domains": create_result["domains"],
+                "msg": "Certificate request created successfully",
             }
 
             # Add validation information
-            if params['validation_method'] == 'HTTP_CSR_HASH':
-                result['validation_files'] = self._prepare_validation_file_paths(
-                    create_result.get('validation_files', []),
-                    params.get('web_root')
+            if params["validation_method"] == "HTTP_CSR_HASH":
+                result["validation_files"] = self._prepare_validation_file_paths(
+                    create_result.get("validation_files", []), params.get("web_root")
                 )
-            elif params['validation_method'] == 'DNS_CSR_HASH':
-                result['dns_records'] = create_result.get('dns_records', [])
+            elif params["validation_method"] == "DNS_CSR_HASH":
+                result["dns_records"] = create_result.get("dns_records", [])
 
             return result
 
     def _handle_validate_state(self, params, cert_manager):
         """Handle validate state - validate a pending certificate."""
-        certificate_id = params.get('certificate_id')
+        certificate_id = params.get("certificate_id")
 
         # Use certificate lock to prevent concurrent validation operations
-        with acquire_certificate_lock(certificate_id, 'certificate_validate'):
+        with acquire_certificate_lock(certificate_id, "certificate_validate"):
             if not certificate_id:
                 # Try to find certificate ID by domains
-                certificate_id = cert_manager.find_certificate_for_domains(params['domains'])
+                certificate_id = cert_manager.find_certificate_for_domains(params["domains"])
                 if not certificate_id:
                     raise ZeroSSLCertificateError("Certificate ID not found for specified domains")
 
             validate_result = cert_manager.validate_certificate(
-                certificate_id,
-                params['validation_method']
+                certificate_id, params["validation_method"]
             )
 
             return {
-                'changed': True,
-                'certificate_id': certificate_id,
-                'validation_result': validate_result,
-                'msg': 'Certificate validation triggered successfully'
+                "changed": True,
+                "certificate_id": certificate_id,
+                "validation_result": validate_result,
+                "msg": "Certificate validation triggered successfully",
             }
 
     def _handle_download_state(self, params, cert_manager):
         """Handle download state - download an issued certificate."""
-        certificate_id = params.get('certificate_id')
+        certificate_id = params.get("certificate_id")
 
         # Use certificate lock to prevent concurrent download operations
-        with acquire_certificate_lock(certificate_id, 'certificate_download'):
+        with acquire_certificate_lock(certificate_id, "certificate_download"):
             if not certificate_id:
                 # Try to find certificate ID by domains
-                certificate_id = cert_manager.find_certificate_for_domains(params['domains'])
+                certificate_id = cert_manager.find_certificate_for_domains(params["domains"])
                 if not certificate_id:
                     raise ZeroSSLCertificateError("Certificate ID not found for specified domains")
 
             # Check certificate status
             cert_info = cert_manager.get_certificate_status(certificate_id)
-            if cert_info['status'] != 'issued':
-                raise ZeroSSLCertificateError(f"Certificate not ready for download. Status: {cert_info['status']}")
+            if cert_info["status"] != "issued":
+                raise ZeroSSLCertificateError(
+                    f"Certificate not ready for download. Status: {cert_info['status']}"
+                )
 
             # Check if files need updating (idempotent behavior)
-            files_need_update = self._check_certificate_files_need_update(certificate_id, cert_manager, params)
+            files_need_update = self._check_certificate_files_need_update(
+                certificate_id, cert_manager, params
+            )
 
             if not files_need_update:
                 return {
-                    'changed': False,
-                    'certificate_id': certificate_id,
-                    'status': cert_info['status'],
-                    'domains': params['domains'],
-                    'expires': cert_info.get('expires'),
-                    'msg': 'Certificate files already up to date'
+                    "changed": False,
+                    "certificate_id": certificate_id,
+                    "status": cert_info["status"],
+                    "domains": params["domains"],
+                    "expires": cert_info.get("expires"),
+                    "msg": "Certificate files already up to date",
                 }
 
             # Download certificate and update files
@@ -797,87 +806,81 @@ class ActionModule(ActionBase):
             files_created = self._save_certificate_bundle(bundle, params)
 
             return {
-                'changed': True,
-                'certificate_id': certificate_id,
-                'status': cert_info['status'],
-                'domains': params['domains'],
-                'expires': cert_info.get('expires'),
-                'files_created': files_created,
-                'msg': 'Certificate downloaded successfully'
+                "changed": True,
+                "certificate_id": certificate_id,
+                "status": cert_info["status"],
+                "domains": params["domains"],
+                "expires": cert_info.get("expires"),
+                "files_created": files_created,
+                "msg": "Certificate downloaded successfully",
             }
 
     def _handle_check_renewal_state(self, params, cert_manager):
         """Handle check_renew_or_create state - check if renewal is needed."""
         needs_renewal = cert_manager.needs_renewal(
-            params['domains'],
-            params['renew_threshold_days']
+            params["domains"], params["renew_threshold_days"]
         )
 
-        result = {
-            'changed': False,
-            'needs_renewal': needs_renewal,
-            'domains': params['domains']
-        }
+        result = {"changed": False, "needs_renewal": needs_renewal, "domains": params["domains"]}
 
         # Get certificate info if it exists
-        cert_id = cert_manager.find_certificate_for_domains(params['domains'])
+        cert_id = cert_manager.find_certificate_for_domains(params["domains"])
         if cert_id:
             cert_info = cert_manager.get_certificate_status(cert_id)
-            result.update({
-                'certificate_id': cert_id,
-                'status': cert_info['status'],
-                'expires': cert_info.get('expires'),
-                'msg': f"Certificate {'needs' if needs_renewal else 'does not need'} renewal"
-            })
+            result.update(
+                {
+                    "certificate_id": cert_id,
+                    "status": cert_info["status"],
+                    "expires": cert_info.get("expires"),
+                    "msg": f"Certificate {'needs' if needs_renewal else 'does not need'} renewal",
+                }
+            )
         else:
-            result['msg'] = 'No certificate found for domains - creation needed'
+            result["msg"] = "No certificate found for domains - creation needed"
 
         return result
 
     def _handle_absent_state(self, params, cert_manager):
         """Handle absent state - cancel/remove certificate."""
-        cert_id = cert_manager.find_certificate_for_domains(params['domains'])
+        cert_id = cert_manager.find_certificate_for_domains(params["domains"])
 
         if not cert_id:
-            return {
-                'changed': False,
-                'msg': 'Certificate not found - already absent'
-            }
+            return {"changed": False, "msg": "Certificate not found - already absent"}
 
         # Cancel certificate (ZeroSSL doesn't actually delete, just cancels)
         try:
             cert_manager.api_client.cancel_certificate(cert_id)
             return {
-                'changed': True,
-                'certificate_id': cert_id,
-                'msg': 'Certificate cancelled successfully'
+                "changed": True,
+                "certificate_id": cert_id,
+                "msg": "Certificate cancelled successfully",
             }
         except Exception as e:
             self.display.warning(f"Certificate cancellation may have failed: {e}")
             return {
-                'changed': True,
-                'certificate_id': cert_id,
-                'msg': 'Certificate cancellation attempted'
+                "changed": True,
+                "certificate_id": cert_id,
+                "msg": "Certificate cancellation attempted",
             }
 
     def _get_csr_content(self, params):
         """Get CSR content from file or parameter."""
-        if params.get('csr'):
-            return params['csr']
-        elif params.get('csr_path'):
+        if params.get("csr"):
+            return params["csr"]
+        elif params.get("csr_path"):
             try:
-                with open(params['csr_path'], 'r') as f:
+                with open(params["csr_path"], "r") as f:
                     return f.read()
             except Exception as e:
                 raise ZeroSSLFileSystemError(
                     f"Failed to read CSR from {params['csr_path']}: {e}",
-                    file_path=params['csr_path'],
-                    operation="read"
+                    file_path=params["csr_path"],
+                    operation="read",
                 )
         else:
             # Generate CSR if neither provided
             self.display.vv("ZeroSSL: Generating CSR for domains")
-            csr_content, _ = generate_csr(params['domains'])
+            csr_content, _ = generate_csr(params["domains"])
             return csr_content
 
     def _place_validation_files(self, validation_files, web_root):
@@ -888,10 +891,10 @@ class ActionModule(ActionBase):
         validation_handler = ValidationHandler()
         result = validation_handler.place_validation_files(validation_files, web_root)
 
-        if not result['success']:
+        if not result["success"]:
             raise ZeroSSLFileSystemError(
                 f"Failed to place validation files: {result['error']}",
-                operation="validation_file_placement"
+                operation="validation_file_placement",
             )
 
     def _prepare_validation_file_paths(self, validation_files, web_root):
@@ -901,8 +904,8 @@ class ActionModule(ActionBase):
 
         # Add full file paths for user convenience
         for vf in validation_files:
-            if 'url_path' in vf and web_root:
-                vf['file_path'] = str(Path(web_root) / vf['url_path'].lstrip('/'))
+            if "url_path" in vf and web_root:
+                vf["file_path"] = str(Path(web_root) / vf["url_path"].lstrip("/"))
 
         return validation_files
 
@@ -911,66 +914,52 @@ class ActionModule(ActionBase):
         files_created = []
 
         # Backup existing files if requested
-        if params.get('backup', False):
+        if params.get("backup", False):
             backup_files = self._backup_existing_files(params)
             if backup_files:
                 files_created.extend(backup_files)
 
-        file_mode = params['file_mode']  # octal string to int in the plugin params validators.
+        file_mode = params["file_mode"]  # octal string to int in the plugin params validators.
 
         # Save certificate
-        if params.get('certificate_path'):
-            if params.get('private_key_path') or params.get('ca_bundle_path'):
+        if params.get("certificate_path"):
+            if params.get("private_key_path") or params.get("ca_bundle_path"):
                 # Save certificate only
                 safe_write_file(
-                    params['certificate_path'],
-                    bundle['certificate'],
-                    mode=file_mode,
-                    backup=True
+                    params["certificate_path"], bundle["certificate"], mode=file_mode, backup=True
                 )
             else:
                 # Save full chain (certificate + CA bundle + private key if no separate paths)
-                content = bundle['full_chain']
-                if not params.get('private_key_path'):
-                    content += '\n' + bundle.get('private_key', '')
+                content = bundle["full_chain"]
+                if not params.get("private_key_path"):
+                    content += "\n" + bundle.get("private_key", "")
 
-                safe_write_file(
-                    params['certificate_path'],
-                    content,
-                    mode=file_mode,
-                    backup=True
-                )
-            files_created.append(params['certificate_path'])
+                safe_write_file(params["certificate_path"], content, mode=file_mode, backup=True)
+            files_created.append(params["certificate_path"])
 
         # Save private key separately if requested
-        if params.get('private_key_path') and bundle.get('private_key'):
+        if params.get("private_key_path") and bundle.get("private_key"):
             safe_write_file(
-                params['private_key_path'],
-                bundle['private_key'],
+                params["private_key_path"],
+                bundle["private_key"],
                 mode=0o600,  # Always 600 for private keys
-                backup=True
+                backup=True,
             )
-            files_created.append(params['private_key_path'])
+            files_created.append(params["private_key_path"])
 
         # Save CA bundle separately if requested
-        if params.get('ca_bundle_path'):
+        if params.get("ca_bundle_path"):
             safe_write_file(
-                params['ca_bundle_path'],
-                bundle['ca_bundle'],
-                mode=file_mode,
-                backup=True
+                params["ca_bundle_path"], bundle["ca_bundle"], mode=file_mode, backup=True
             )
-            files_created.append(params['ca_bundle_path'])
+            files_created.append(params["ca_bundle_path"])
 
         # Save full chain separately if requested
-        if params.get('full_chain_path'):
+        if params.get("full_chain_path"):
             safe_write_file(
-                params['full_chain_path'],
-                bundle['full_chain'],
-                mode=file_mode,
-                backup=True
+                params["full_chain_path"], bundle["full_chain"], mode=file_mode, backup=True
             )
-            files_created.append(params['full_chain_path'])
+            files_created.append(params["full_chain_path"])
 
         return files_created
 
@@ -983,22 +972,24 @@ class ActionModule(ActionBase):
         - Files exist but are outdated (different content)
         - Force update is requested
         """
-        if params.get('force', False):
+        if params.get("force", False):
             return True
 
         # If no file paths specified, no files to update
-        if not any([
-            params.get('certificate_path'),
-            params.get('private_key_path'),
-            params.get('ca_bundle_path'),
-            params.get('full_chain_path')
-        ]):
+        if not any(
+            [
+                params.get("certificate_path"),
+                params.get("private_key_path"),
+                params.get("ca_bundle_path"),
+                params.get("full_chain_path"),
+            ]
+        ):
             return False
 
         try:
             # First check certificate status - only download if issued
             cert_info = cert_manager.get_certificate_status(certificate_id)
-            if cert_info['status'] != 'issued':
+            if cert_info["status"] != "issued":
                 # Certificate is not issued yet, files definitely need update when it becomes available
                 return True
 
@@ -1007,10 +998,10 @@ class ActionModule(ActionBase):
 
             # Check each file path that was specified
             files_to_check = [
-                (params.get('certificate_path'), bundle.get('certificate', '')),
-                (params.get('private_key_path'), bundle.get('private_key', '')),
-                (params.get('ca_bundle_path'), bundle.get('ca_bundle', '')),
-                (params.get('full_chain_path'), bundle.get('full_chain', ''))
+                (params.get("certificate_path"), bundle.get("certificate", "")),
+                (params.get("private_key_path"), bundle.get("private_key", "")),
+                (params.get("ca_bundle_path"), bundle.get("ca_bundle", "")),
+                (params.get("full_chain_path"), bundle.get("full_chain", "")),
             ]
 
             for file_path, expected_content in files_to_check:
@@ -1028,12 +1019,13 @@ class ActionModule(ActionBase):
         """Check if file exists and matches expected content."""
         try:
             from pathlib import Path
+
             file_obj = Path(file_path)
 
             if not file_obj.exists():
                 return False
 
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 current_content = f.read().strip()
 
             # Compare normalized content (strip whitespace)
@@ -1046,13 +1038,13 @@ class ActionModule(ActionBase):
     def _backup_existing_files(self, params):
         """Create backup copies of existing certificate files."""
         backup_files = []
-        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
         file_paths = [
-            params.get('certificate_path'),
-            params.get('private_key_path'),
-            params.get('ca_bundle_path'),
-            params.get('full_chain_path')
+            params.get("certificate_path"),
+            params.get("private_key_path"),
+            params.get("ca_bundle_path"),
+            params.get("full_chain_path"),
         ]
 
         for file_path in file_paths:
@@ -1060,6 +1052,7 @@ class ActionModule(ActionBase):
                 backup_path = f"{file_path}.bak.{timestamp}"
                 try:
                     import shutil
+
                     shutil.copy2(file_path, backup_path)
                     backup_files.append(backup_path)
                     self.display.vv(f"ZeroSSL: Created backup {backup_path}")
@@ -1084,11 +1077,10 @@ class ActionModule(ActionBase):
         try:
             # Create a temporary API client for the lookup
             # Note: This assumes api_key is available in task args
-            if hasattr(self, '_task') and self._task.args.get('api_key'):
-                api_client = ZeroSSLAPIClient(self._task.args['api_key'])
+            if hasattr(self, "_task") and self._task.args.get("api_key"):
+                api_client = ZeroSSLAPIClient(self._task.args["api_key"])
                 cert_manager = CertificateManager(
-                    api_key=self._task.args['api_key'],
-                    api_client=api_client
+                    api_key=self._task.args["api_key"], api_client=api_client
                 )
 
                 # Find certificate for the domain
@@ -1116,11 +1108,10 @@ class ActionModule(ActionBase):
         """
         try:
             # Create a temporary API client for the lookup
-            if hasattr(self, '_task') and self._task.args.get('api_key'):
-                api_client = ZeroSSLAPIClient(self._task.args['api_key'])
+            if hasattr(self, "_task") and self._task.args.get("api_key"):
+                api_client = ZeroSSLAPIClient(self._task.args["api_key"])
                 cert_manager = CertificateManager(
-                    api_key=self._task.args['api_key'],
-                    api_client=api_client
+                    api_key=self._task.args["api_key"], api_client=api_client
                 )
 
                 # Get certificate status

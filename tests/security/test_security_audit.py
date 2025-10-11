@@ -23,7 +23,8 @@ try:
 except ImportError:
     import sys
     import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
     from plugins.module_utils.zerossl.api_client import ZeroSSLAPIClient
     from plugins.module_utils.zerossl.certificate_manager import CertificateManager
     from plugins.module_utils.zerossl.concurrency import safe_write_file, safe_read_file
@@ -33,7 +34,7 @@ from tests.fixtures import (
     MockZeroSSLAPIClient,
     create_test_file_structure,
     SAMPLE_PRIVATE_KEY,
-    SAMPLE_SINGLE_DOMAIN_CERT as SAMPLE_CERTIFICATE_PEM
+    SAMPLE_SINGLE_DOMAIN_CERT as SAMPLE_CERTIFICATE_PEM,
 )
 
 
@@ -54,14 +55,14 @@ class TestAPIKeySecurity:
         caplog.clear()
 
         # Trigger various operations that might log
-        with patch('requests.Session.post') as mock_post:
+        with patch("requests.Session.post") as mock_post:
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {'id': 'cert-123', 'status': 'draft'}
+            mock_response.json.return_value = {"id": "cert-123", "status": "draft"}
             mock_post.return_value = mock_response
 
             try:
-                api_client.create_certificate(['example.com'], 'mock-csr')
+                api_client.create_certificate(["example.com"], "mock-csr")
             except Exception:
                 pass
 
@@ -76,7 +77,7 @@ class TestAPIKeySecurity:
         api_client = ZeroSSLAPIClient(api_key)
 
         # Verify API key is accessible but not exposed in string representation
-        assert hasattr(api_client, 'api_key')
+        assert hasattr(api_client, "api_key")
         assert api_client.api_key == api_key
 
         # Check object representation doesn't expose API key
@@ -106,26 +107,26 @@ class TestAPIKeySecurity:
         api_client = ZeroSSLAPIClient(api_key)
 
         # Mock session to capture headers and prevent actual HTTP calls
-        with patch.object(api_client, 'session') as mock_session:
+        with patch.object(api_client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {'result': 'success'}
+            mock_response.json.return_value = {"result": "success"}
             mock_response.headers = {}
             mock_session.get.return_value = mock_response
             mock_session.post.return_value = mock_response
 
             # Make a GET request
-            api_client._make_request('GET', '/certificates', params={'status': 'issued'})
+            api_client._make_request("GET", "/certificates", params={"status": "issued"})
 
             # Verify GET was called
             call_args = mock_session.get.call_args
             if call_args:
                 # Check if API key is in the URL params
                 called_url = call_args[0][0] if call_args[0] else ""
-                assert 'access_key=' in called_url
+                assert "access_key=" in called_url
 
             # Verify API key is not in session headers
-            session_headers = getattr(mock_session, 'headers', {})
+            session_headers = getattr(mock_session, "headers", {})
             for header_value in session_headers.values():
                 assert api_key not in str(header_value)
 
@@ -138,11 +139,7 @@ class TestFilePermissions:
         private_key_file = tmp_path / "test_private.key"
 
         # Create private key file
-        create_file_with_permissions(
-            str(private_key_file),
-            SAMPLE_PRIVATE_KEY,
-            0o600
-        )
+        create_file_with_permissions(str(private_key_file), SAMPLE_PRIVATE_KEY, 0o600)
 
         # Verify file exists and has correct permissions
         assert private_key_file.exists()
@@ -162,11 +159,7 @@ class TestFilePermissions:
         cert_file = tmp_path / "test_cert.crt"
 
         # Create certificate file with default permissions
-        create_file_with_permissions(
-            str(cert_file),
-            SAMPLE_CERTIFICATE_PEM,
-            0o644
-        )
+        create_file_with_permissions(str(cert_file), SAMPLE_CERTIFICATE_PEM, 0o644)
 
         # Verify file exists and has correct permissions
         assert cert_file.exists()
@@ -181,12 +174,7 @@ class TestFilePermissions:
         test_content = "sensitive file content"
 
         # Write file with secure permissions
-        safe_write_file(
-            str(test_file),
-            test_content,
-            mode=0o600,
-            backup=True
-        )
+        safe_write_file(str(test_file), test_content, mode=0o600, backup=True)
 
         # Verify file exists with correct permissions
         assert test_file.exists()
@@ -222,11 +210,7 @@ class TestFilePermissions:
 
         try:
             # Create file with restrictive permissions
-            create_file_with_permissions(
-                str(test_file),
-                "sensitive content",
-                0o600
-            )
+            create_file_with_permissions(str(test_file), "sensitive content", 0o600)
 
             # Verify permissions are correct despite umask
             file_stat = test_file.stat()
@@ -272,12 +256,7 @@ class TestTemporaryFileCleanup:
         content = "important certificate data"
 
         # Write file atomically using safe_write_file
-        safe_write_file(
-            str(target_file),
-            content,
-            mode=0o600,
-            backup=True
-        )
+        safe_write_file(str(target_file), content, mode=0o600, backup=True)
 
         # Verify file exists and has correct content
         assert target_file.exists()
@@ -288,12 +267,7 @@ class TestTemporaryFileCleanup:
 
         # Update file again to create backup
         new_content = "updated certificate data"
-        safe_write_file(
-            str(target_file),
-            new_content,
-            mode=0o600,
-            backup=True
-        )
+        safe_write_file(str(target_file), new_content, mode=0o600, backup=True)
 
         # Verify backup was created
         backup_files = list(tmp_path.glob("*.backup"))
@@ -334,7 +308,7 @@ class TestInputValidation:
             "example.com",
             "www.example.com",
             "sub.domain.example.com",
-            "*.example.com"
+            "*.example.com",
         ]
 
         for domain in valid_domains:
@@ -344,13 +318,13 @@ class TestInputValidation:
         # Invalid domains that could be security issues
         invalid_domains = [
             "http://example.com",  # URL instead of domain
-            "example.com/path",    # Path injection
-            "example.com;rm -rf /", # Command injection
-            "../example.com",      # Directory traversal
-            "example..com",        # Double dots
-            "",                    # Empty domain
+            "example.com/path",  # Path injection
+            "example.com;rm -rf /",  # Command injection
+            "../example.com",  # Directory traversal
+            "example..com",  # Double dots
+            "",  # Empty domain
             "domain with spaces",  # Spaces
-            "domain\nwith\nnewlines", # Newlines
+            "domain\nwith\nnewlines",  # Newlines
         ]
 
         for domain in invalid_domains:
@@ -364,20 +338,16 @@ class TestInputValidation:
         valid_cert_path.parent.mkdir(parents=True)
 
         # Test safe file writing with valid path
-        safe_write_file(
-            str(valid_cert_path),
-            "certificate content",
-            mode=0o644
-        )
+        safe_write_file(str(valid_cert_path), "certificate content", mode=0o644)
 
         assert valid_cert_path.exists()
 
         # Test potentially dangerous paths
         dangerous_paths = [
-            "/etc/passwd",           # System file
-            "../../../etc/passwd",   # Directory traversal
-            "/tmp/../etc/passwd",    # Path manipulation
-            "/dev/null",            # Device file
+            "/etc/passwd",  # System file
+            "../../../etc/passwd",  # Directory traversal
+            "/tmp/../etc/passwd",  # Path manipulation
+            "/dev/null",  # Device file
         ]
 
         for dangerous_path in dangerous_paths:
@@ -386,7 +356,7 @@ class TestInputValidation:
             path_obj = Path(dangerous_path).resolve()
 
             # Verify we're not writing to system directories
-            if str(path_obj).startswith(('/etc', '/dev', '/proc', '/sys')):
+            if str(path_obj).startswith(("/etc", "/dev", "/proc", "/sys")):
                 # This would be caught by proper path validation
                 continue
 
@@ -416,17 +386,19 @@ MIICZjCCAU4CAQAwGTEXMBUGA1UEAwwOZXhhbXBsZS5jb20wggEi...
 
         # Invalid CSR content
         invalid_csrs = [
-            "",                                    # Empty
-            "not a csr",                          # Random text
-            "-----BEGIN PRIVATE KEY-----\n...",   # Wrong type
-            "javascript:alert('xss')",            # XSS attempt
-            "<script>alert('xss')</script>",      # HTML injection
+            "",  # Empty
+            "not a csr",  # Random text
+            "-----BEGIN PRIVATE KEY-----\n...",  # Wrong type
+            "javascript:alert('xss')",  # XSS attempt
+            "<script>alert('xss')</script>",  # HTML injection
         ]
 
         for invalid_csr in invalid_csrs:
             # Should be rejected by proper validation
-            assert not (invalid_csr.startswith("-----BEGIN CERTIFICATE REQUEST-----") and
-                       invalid_csr.endswith("-----END CERTIFICATE REQUEST-----"))
+            assert not (
+                invalid_csr.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+                and invalid_csr.endswith("-----END CERTIFICATE REQUEST-----")
+            )
 
 
 class TestSecurityBestPractices:
@@ -440,40 +412,38 @@ class TestSecurityBestPractices:
         from tests.fixtures import MOCK_CERTIFICATE_PEM, MOCK_PRIVATE_KEY_PEM
 
         # Mock certificates should be obviously fake (contain placeholder text)
-        assert ("TRUNCATED" in MOCK_CERTIFICATE_PEM.upper() or
-                "BREVITY" in MOCK_CERTIFICATE_PEM.upper() or
-                "EXAMPLE" in MOCK_CERTIFICATE_PEM.upper() or
-                "TEST" in MOCK_CERTIFICATE_PEM.upper())
-        assert ("TRUNCATED" in MOCK_PRIVATE_KEY_PEM.upper() or
-                "BREVITY" in MOCK_PRIVATE_KEY_PEM.upper() or
-                "EXAMPLE" in MOCK_PRIVATE_KEY_PEM.upper() or
-                "TEST" in MOCK_PRIVATE_KEY_PEM.upper())
+        assert (
+            "TRUNCATED" in MOCK_CERTIFICATE_PEM.upper()
+            or "BREVITY" in MOCK_CERTIFICATE_PEM.upper()
+            or "EXAMPLE" in MOCK_CERTIFICATE_PEM.upper()
+            or "TEST" in MOCK_CERTIFICATE_PEM.upper()
+        )
+        assert (
+            "TRUNCATED" in MOCK_PRIVATE_KEY_PEM.upper()
+            or "BREVITY" in MOCK_PRIVATE_KEY_PEM.upper()
+            or "EXAMPLE" in MOCK_PRIVATE_KEY_PEM.upper()
+            or "TEST" in MOCK_PRIVATE_KEY_PEM.upper()
+        )
 
     def test_error_message_sanitization(self):
         """Test that error messages don't leak sensitive information."""
         from plugins.module_utils.zerossl.exceptions import ZeroSSLHTTPError
 
         # Create error with potentially sensitive data
-        sensitive_data = {
-            'api_key': 'sk_live_secret123',
-            'error': 'Authentication failed'
-        }
+        sensitive_data = {"api_key": "sk_live_secret123", "error": "Authentication failed"}
 
-        error = ZeroSSLHTTPError(
-            "API request failed",
-            response_data=sensitive_data
-        )
+        error = ZeroSSLHTTPError("API request failed", response_data=sensitive_data)
 
         # Error message should not contain the API key
         error_str = str(error)
-        assert 'sk_live_secret123' not in error_str
+        assert "sk_live_secret123" not in error_str
 
     def test_ssl_verification(self):
         """Test that SSL verification is enabled."""
         api_client = ZeroSSLAPIClient("test-key-1234567890123456")
 
         # Verify SSL verification is enabled by default
-        with patch.object(api_client, 'session') as mock_session:
+        with patch.object(api_client, "session") as mock_session:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {}
@@ -481,7 +451,7 @@ class TestSecurityBestPractices:
             mock_session.get.return_value = mock_response
 
             # Make a request
-            api_client._make_request('GET', '/test')
+            api_client._make_request("GET", "/test")
 
             # Verify GET was called
             mock_session.get.assert_called_once()
@@ -506,7 +476,7 @@ class TestSecurityBestPractices:
         api_client = ZeroSSLAPIClient("test-key-1234567890123456")
 
         # Verify rate limiting is tracked
-        assert hasattr(api_client, 'rate_limit_remaining')
+        assert hasattr(api_client, "rate_limit_remaining")
         assert api_client.rate_limit_remaining > 0
 
     def test_secure_defaults(self):
@@ -535,19 +505,19 @@ class TestSecurityAuditReport:
     def test_generate_security_audit_report(self, tmp_path):
         """Generate a comprehensive security audit report."""
         audit_results = {
-            'api_key_security': 'PASS',
-            'file_permissions': 'PASS',
-            'temp_file_cleanup': 'PASS',
-            'input_validation': 'PASS',
-            'ssl_verification': 'PASS',
-            'error_sanitization': 'PASS',
-            'secure_defaults': 'PASS'
+            "api_key_security": "PASS",
+            "file_permissions": "PASS",
+            "temp_file_cleanup": "PASS",
+            "input_validation": "PASS",
+            "ssl_verification": "PASS",
+            "error_sanitization": "PASS",
+            "secure_defaults": "PASS",
         }
 
         # Generate audit report
         report_file = tmp_path / "security_audit_report.txt"
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             f.write("ZeroSSL Plugin Security Audit Report\n")
             f.write("=" * 40 + "\n\n")
 

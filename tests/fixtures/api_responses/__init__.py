@@ -43,6 +43,7 @@ API_RESPONSES = {
     "validation_pending_details": VALIDATION_PENDING_RESPONSE,
 }
 
+
 # Helper functions for dynamic test data
 def get_response(response_type, **kwargs):
     """Get a response by type with optional customization."""
@@ -52,9 +53,11 @@ def get_response(response_type, **kwargs):
         return response
     raise ValueError(f"Unknown response type: {response_type}")
 
+
 def get_test_scenario(scenario_name):
     """Get test scenario configuration."""
     return TEST_SCENARIOS.get(scenario_name, {})
+
 
 def get_test_configuration(config_name):
     """Get test configuration."""
