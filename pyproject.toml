@@ -27,6 +27,7 @@ dependencies = [
     "ansible>=8.0.0",
     "requests>=2.31.0",
     "cryptography>=41.0.0",
+    "dnspython>=2.4.0",
 ]
 
 
@@ -126,6 +127,7 @@ skips = ["B108", "B110"]
 [dependency-groups]
 dev = [
     "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
     "pytest-ansible>=4.0.0",
     "pytest-mock>=3.11.0",
     "pytest-xdist>=3.3.0",
