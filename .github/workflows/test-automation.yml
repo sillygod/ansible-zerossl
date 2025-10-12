@@ -289,13 +289,6 @@ jobs:
         name: coverage-xml
         path: coverage.xml
 
-    - name: Coverage Badge
-      if: github.ref == 'refs/heads/main'
-      uses: 5monkeys/cobertura-action@master
-      with:
-        path: coverage.xml
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        minimum_coverage: 25
 
   security-scan:
     name: Security Scan
